@@ -75,31 +75,36 @@ X_flat = X.ravel()
 trend_vals = log_trend(X_flat)
 residuals = y - trend_vals
 
-# Define kernel without DotProduct
+# Define optimisable kernel (remove fixed bounds)
 kernel = (
-    C(1.0, constant_value_bounds="fixed") *
+    C(1.0, (1e-3, 1e3)) *
     (
-        RBF(length_scale=LENGTH_SCALE_SE, length_scale_bounds="fixed") +
-        ExpSineSquared(length_scale=LENGTH_SCALE_SIN, periodicity=PERIOD_MONTHS, length_scale_bounds="fixed", periodicity_bounds="fixed")
+        RBF(length_scale=50.0, length_scale_bounds=(1e-1, 1e3)) +
+        ExpSineSquared(length_scale=1.0, periodicity=48.0,
+                       length_scale_bounds=(1e-2, 1e2),
+                       periodicity_bounds=(12, 96))  # ~1-8 years
     ) +
-    WhiteKernel(noise_level=NOISE_LEVEL, noise_level_bounds="fixed")
+    WhiteKernel(noise_level=0.5, noise_level_bounds=(1e-5, 1e1))
 )
 
-# GP on residuals
-gp = GaussianProcessRegressor(kernel=kernel, optimizer=None, normalize_y=True)
+# GP with optimiser enabled
+gp = GaussianProcessRegressor(kernel=kernel, optimizer="fmin_l_bfgs_b", n_restarts_optimizer=3, normalize_y=True)
 gp.fit(X, residuals)
 
-# Predict residuals
-X_pred = np.linspace(0, len(X) + MONTHS_INTO_FUTURE, 700).reshape(-1, 1)
-y_resid_pred, y_std = gp.predict(X_pred, return_std=True)
+# ─── GP PREDICTION ───────────────────────────────────────────────────────────────
 
-# Add trend back
+X_pred = np.linspace(0, len(X) + MONTHS_INTO_FUTURE, 700).reshape(-1, 1)
+
+# Predict residuals from GP
 start = time.time()
 y_resid_pred, y_std = gp.predict(X_pred, return_std=True)
+
+# Add back the log trend to residual predictions
 y_pred = y_resid_pred + log_trend(X_pred.ravel())
 end = time.time()
 
 print(f"\nGP fit + predict completed in {end - start:.3f} seconds")
+
 
 # ─── UTILITY FUNCTION ───────────────────────────────────────────────────────────
 
