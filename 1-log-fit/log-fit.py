@@ -9,12 +9,18 @@ import os
 DATA_PATH = '../0-data/btc_weekly_prices.csv'
 OUTPUT_PKL = 'log_trend_params.pkl'
 
-def load_data(path):
+def load_data(path, cycle_length=208):
     df = pd.read_csv(path, sep=';')
     df['timestamp'] = pd.to_datetime(df['timestamp'])
     df = df.sort_values(by='timestamp')
-    y = np.log(df['close'].astype(float).values)
-    X = np.arange(len(y))
+    y_all = np.log(df['close'].astype(float).values)
+
+    # Trim to the most recent full number of cycles
+    total_weeks = len(y_all)
+    usable_weeks = (total_weeks // cycle_length) * cycle_length
+    y = y_all[-usable_weeks:]
+    X = np.arange(usable_weeks)
+
     return X, y
 
 def log_func(x, a, b, c):

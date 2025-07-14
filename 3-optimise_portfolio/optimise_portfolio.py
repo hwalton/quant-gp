@@ -20,7 +20,7 @@ class Config:
     utility_function: str = 'tanh'
     sigmoid_k: float = 25.0
     w0: float = 0.98
-    predict_index_offset: int = 52
+    predict_index_offset: int = 4
     y_limit: tuple = (4, 18)
 
 def load_data(cfg: Config):
