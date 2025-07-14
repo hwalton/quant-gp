@@ -5,7 +5,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.gaussian_process import GaussianProcessRegressor
-from sklearn.gaussian_process.kernels import RBF, ConstantKernel as C, WhiteKernel
+from sklearn.gaussian_process.kernels import RBF, ConstantKernel as C, WhiteKernel, ExpSineSquared, DotProduct
 from scipy.stats import norm
 from scipy.integrate import quad
 from scipy.optimize import minimize_scalar
@@ -18,13 +18,14 @@ DATA_PATH = 'data/btc_monthly_prices.csv'
 PREDICT_WEEKS_FORWARD = 12         # how many weeks ahead to evaluate return
 INITIAL_WEALTH = 1.0              # starting capital
 UTILITY_FUNCTION = 'sigmoid'      # choices: 'log', 'sqrt', 'sigmoid'
-NOISE_LEVEL = 3e-1                # GP WhiteKernel noise
+NOISE_LEVEL = 0.25e-1                # GP WhiteKernel noise
 LENGTH_SCALE = 20.0               # GP RBF kernel length scale
 CONFIDENCE_BAND = True            # plot GP std dev band
-Y_LIMIT = (4, 20)             # y-axis plot limits
+Y_LIMIT = (4, 12)             # y-axis plot limits
 NORMALISE_RETURNS = True          # convert price difference to percentage return
 SIGMOID_K = 25.0                   # steepness of sigmoid
 SIGMOID_W0 = 0.98             # inflection point of sigmoid (target wealth)
+period_months = 48               # 4 years
 
 # ─── LOAD DATA ──────────────────────────────────────────────────────────────────
 
@@ -57,7 +58,11 @@ print(f"y min: {np.min(y):.2f}, y max: {np.max(y):.2f}")
 
 kernel = (
     C(1.0, constant_value_bounds="fixed") *
-    RBF(length_scale=LENGTH_SCALE, length_scale_bounds="fixed") +
+    (
+        RBF(length_scale=LENGTH_SCALE, length_scale_bounds="fixed") +
+        ExpSineSquared(length_scale=10.0, periodicity=period_months, length_scale_bounds="fixed", periodicity_bounds="fixed") +
+        DotProduct(sigma_0=1.0, sigma_0_bounds="fixed")  # ← linear trend kernel
+    ) +
     WhiteKernel(noise_level=NOISE_LEVEL, noise_level_bounds="fixed")
 )
 
