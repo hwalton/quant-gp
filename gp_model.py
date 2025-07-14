@@ -21,7 +21,7 @@ UTILITY_FUNCTION = 'sigmoid'      # choices: 'log', 'sqrt', 'sigmoid'
 NOISE_LEVEL = 0.25e-1                # GP WhiteKernel noise
 LENGTH_SCALE = 20.0               # GP RBF kernel length scale
 CONFIDENCE_BAND = True            # plot GP std dev band
-Y_LIMIT = (4, 12)             # y-axis plot limits
+Y_LIMIT = (4, 18)             # y-axis plot limits
 NORMALISE_RETURNS = True          # convert price difference to percentage return
 SIGMOID_K = 25.0                   # steepness of sigmoid
 SIGMOID_W0 = 0.98             # inflection point of sigmoid (target wealth)
@@ -72,7 +72,9 @@ gp = GaussianProcessRegressor(kernel=kernel, optimizer=None, normalize_y=True)
 
 start = time.time()
 gp.fit(X, y)
-X_pred = np.linspace(0, len(X) + 10, 500).reshape(-1, 1)
+months_into_future = 48  # 4 years
+X_pred = np.linspace(0, len(X) + months_into_future, 700).reshape(-1, 1)
+
 y_pred, y_std = gp.predict(X_pred, return_std=True)
 end = time.time()
 
@@ -101,8 +103,8 @@ def expected_utility(weight, mu, sigma):
 
 # ─── TARGET PREDICTION POINT ────────────────────────────────────────────────────
 
-weeks_into_future = X[-1][0] + PREDICT_WEEKS_FORWARD
-target_index = np.searchsorted(X_pred.ravel(), weeks_into_future)
+months_into_future_index = X[-1][0] + months_into_future
+target_index = np.searchsorted(X_pred.ravel(), months_into_future_index)
 target_index = min(target_index, len(y_pred) - 1)
 
 price_now = y[-1]
@@ -110,7 +112,8 @@ price_pred = y_pred[target_index]
 mu = (price_pred - price_now) / price_now if NORMALISE_RETURNS else price_pred - price_now
 sigma = y_std[target_index] / price_now if NORMALISE_RETURNS else y_std[target_index]
 
-print(f"\nExpected BTC return over {PREDICT_WEEKS_FORWARD} weeks: {mu:.6f}")
+print(f"\nExpected BTC return over {months_into_future} months: {mu:.6f}")
+
 print(f"Predicted standard deviation over {PREDICT_WEEKS_FORWARD} weeks: {sigma:.6f}")
 
 # ─── OPTIMISE ALLOCATION ────────────────────────────────────────────────────────
