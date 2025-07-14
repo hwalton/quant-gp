@@ -69,11 +69,14 @@ def save_outputs(gp, X_pred, y_pred, y_std, cfg: Config):
     np.save(cfg.y_pred_pkl, y_pred)
     np.save(cfg.y_std_pkl, y_std)
 
-def plot_results(X, y, X_pred, y_pred, y_std, cfg: Config):
+def plot_results(X, y, X_pred, y_pred, y_std, log_trend, cfg: Config):
     fig, ax = plt.subplots(figsize=(30, 18))
+    
     ax.plot(X, y, 'kx', label='Observed BTC prices')
     ax.plot(X_pred, y_pred, 'b-', label='GP mean prediction')
+    ax.plot(X_pred, log_trend(X_pred.ravel()), 'g--', label='Log trend fit')  # <-- added line
     ax.fill_between(X_pred.ravel(), y_pred - y_std, y_pred + y_std, alpha=0.2, label='1σ confidence')
+    
     ax.set_xlabel('Weeks since start')
     ax.set_ylabel('Log(BTC Price (USD))')
     ax.set_title('Gaussian Process Regression on BTC Weekly Prices')
@@ -96,7 +99,7 @@ def main():
     X_pred, y_pred, y_std = predict_gp(gp, X, log_trend, cfg)
 
     save_outputs(gp, X_pred, y_pred, y_std, cfg)
-    plot_results(X, y, X_pred, y_pred, y_std, cfg)
+    plot_results(X, y, X_pred, y_pred, y_std, log_trend, cfg)
 
 if __name__ == '__main__':
     main()
