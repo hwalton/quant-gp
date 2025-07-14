@@ -94,18 +94,20 @@ plt.savefig("utility_curve.png")
 print("Saved utility_curve.png")
 
 # Wealth distribution
-r_samples = np.random.normal(mu, sigma, 1000)
-wealth_samples = INITIAL_WEALTH + optimal_weight * r_samples
+r_vals = np.linspace(mu - 5*sigma, mu + 5*sigma, 1000)
+pdf_vals = norm.pdf(r_vals, loc=mu, scale=sigma)
+wealth_vals = INITIAL_WEALTH + optimal_weight * r_vals
 
 plt.figure(figsize=(8, 4))
-sns.histplot(wealth_samples, bins=50, kde=True)
+plt.plot(wealth_vals, pdf_vals, label='Wealth PDF')
 plt.axvline(INITIAL_WEALTH, color='r', linestyle='--', label='Initial Wealth')
 plt.xlabel('Simulated Future Wealth')
-plt.title('Wealth Distribution (Optimal BTC Allocation)')
+plt.ylabel('Probability Density')
+plt.title('Wealth Distribution')
+plt.grid(True)
 plt.legend()
 plt.tight_layout()
 plt.savefig("wealth_distribution.png")
-print("Saved wealth_distribution.png")
 
 # Utility function plot
 if UTILITY_FUNCTION == 'log':
