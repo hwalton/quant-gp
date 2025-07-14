@@ -5,58 +5,163 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.gaussian_process import GaussianProcessRegressor
-from sklearn.gaussian_process.kernels import RBF, ConstantKernel as C
 from sklearn.gaussian_process.kernels import RBF, ConstantKernel as C, WhiteKernel
+from scipy.stats import norm
+from scipy.integrate import quad
+from scipy.optimize import minimize_scalar
+import seaborn as sns
 import time
 
-# --- Load Data ---
-df = pd.read_csv('data/btc_weekly_prices.csv')
+# ─── CONTROL PANEL ──────────────────────────────────────────────────────────────
+
+DATA_PATH = 'data/btc_weekly_prices.csv'
+PREDICT_WEEKS_FORWARD = 12         # how many weeks ahead to evaluate return
+INITIAL_WEALTH = 1.0              # starting capital
+UTILITY_FUNCTION = 'sigmoid'      # choices: 'log', 'sqrt', 'sigmoid'
+NOISE_LEVEL = 3e-1                # GP WhiteKernel noise
+LENGTH_SCALE = 20.0               # GP RBF kernel length scale
+CONFIDENCE_BAND = True            # plot GP std dev band
+Y_LIMIT = (0, 150000)             # y-axis plot limits
+NORMALISE_RETURNS = True          # convert price difference to percentage return
+SIGMOID_K = 500.0                   # steepness of sigmoid
+SIGMOID_W0 = 1.0                  # inflection point of sigmoid (target wealth)
+
+# ─── LOAD DATA ──────────────────────────────────────────────────────────────────
+
+df = pd.read_csv(DATA_PATH)
+X = np.arange(len(df)).reshape(-1, 1)
+y = df['price_usd'].values
 
 print("First few rows of CSV data:")
 print(df.head())
-
-X = np.arange(len(df)).reshape(-1, 1)  # weeks as integer indices
-y = df['price_usd'].values
-
-print("\nX (input weeks):")
-print(X.ravel())
-
-print("\ny (BTC prices):")
-print(y)
-
 print(f"\nX shape: {X.shape}, y shape: {y.shape}")
 print(f"y min: {np.min(y):.2f}, y max: {np.max(y):.2f}")
 
-# --- Define Kernel
-kernel = C(1.0, constant_value_bounds="fixed") * \
-         RBF(length_scale=5.0, length_scale_bounds="fixed") + \
-         WhiteKernel(noise_level=1e-1, noise_level_bounds="fixed")
+# ─── GP DEFINITION ──────────────────────────────────────────────────────────────
 
-# --- Define GP Regressor ---
+kernel = (
+    C(1.0, constant_value_bounds="fixed") *
+    RBF(length_scale=LENGTH_SCALE, length_scale_bounds="fixed") +
+    WhiteKernel(noise_level=NOISE_LEVEL, noise_level_bounds="fixed")
+)
+
 gp = GaussianProcessRegressor(kernel=kernel, optimizer=None, normalize_y=True)
 
-# --- Fit and Predict ---
-start = time.time()
+# ─── FIT AND PREDICT ────────────────────────────────────────────────────────────
 
+start = time.time()
 gp.fit(X, y)
 X_pred = np.linspace(0, len(X) + 10, 500).reshape(-1, 1)
 y_pred, y_std = gp.predict(X_pred, return_std=True)
-
 end = time.time()
+
 print(f"\nGP fit + predict completed in {end - start:.3f} seconds")
 
-# --- Plot ---
+# ─── UTILITY FUNCTION ───────────────────────────────────────────────────────────
+
+def utility(w):
+    if UTILITY_FUNCTION == 'log':
+        return np.log(w) if w > 0 else -np.inf
+    elif UTILITY_FUNCTION == 'sqrt':
+        return np.sqrt(w) if w >= 0 else 0
+    elif UTILITY_FUNCTION == 'sigmoid':
+        return 1 / (1 + np.exp(-SIGMOID_K * (w - SIGMOID_W0)))
+    else:
+        raise ValueError("Unsupported utility function")
+
+# ─── EXPECTED UTILITY FUNCTION ──────────────────────────────────────────────────
+
+def expected_utility(weight, mu, sigma):
+    def integrand(r):
+        wealth = INITIAL_WEALTH + weight * r
+        return utility(wealth) * norm.pdf(r, loc=mu, scale=sigma)
+    result, _ = quad(integrand, mu - 6 * sigma, mu + 6 * sigma, limit=100)
+    return -result  # for minimisation
+
+# ─── TARGET PREDICTION POINT ────────────────────────────────────────────────────
+
+weeks_into_future = X[-1][0] + PREDICT_WEEKS_FORWARD
+target_index = np.searchsorted(X_pred.ravel(), weeks_into_future)
+target_index = min(target_index, len(y_pred) - 1)
+
+price_now = y[-1]
+price_pred = y_pred[target_index]
+mu = (price_pred - price_now) / price_now if NORMALISE_RETURNS else price_pred - price_now
+sigma = y_std[target_index] / price_now if NORMALISE_RETURNS else y_std[target_index]
+
+print(f"\nExpected BTC return over {PREDICT_WEEKS_FORWARD} weeks: {mu:.6f}")
+print(f"Predicted standard deviation over {PREDICT_WEEKS_FORWARD} weeks: {sigma:.6f}")
+
+# ─── OPTIMISE ALLOCATION ────────────────────────────────────────────────────────
+
+opt_result = minimize_scalar(expected_utility, bounds=(0, 1), args=(mu, sigma), method='bounded')
+optimal_weight = opt_result.x
+
+print(f"Optimal BTC allocation based on expected utility: {optimal_weight:.3f}")
+print(f"Optimal Cash allocation: {1 - optimal_weight:.3f}")
+
+# ─── PLOT GP OUTPUT ─────────────────────────────────────────────────────────────
+
 plt.figure(figsize=(10, 6))
-plt.ylim(0, 150000)
 plt.plot(X, y, 'kx', label='Observed BTC prices')
 plt.plot(X_pred, y_pred, 'b-', label='GP mean prediction')
-plt.fill_between(X_pred.ravel(), y_pred - y_std, y_pred + y_std, alpha=0.2, label='1σ confidence')
+if CONFIDENCE_BAND:
+    plt.fill_between(X_pred.ravel(), y_pred - y_std, y_pred + y_std, alpha=0.2, label='1σ confidence')
 plt.xlabel('Weeks since start')
 plt.ylabel('BTC Price (USD)')
 plt.title('Gaussian Process Regression on BTC Weekly Prices')
 plt.legend()
 plt.grid(True)
+plt.ylim(*Y_LIMIT)
 plt.tight_layout()
 plt.savefig("gp_output.png")
-
 print("Plot saved to gp_output.png")
+
+# ─── PLOT UTILITY CURVE ─────────────────────────────────────────────────────────
+
+weights = np.linspace(0, 1, 100)
+utilities = [-expected_utility(w, mu, sigma) for w in weights]
+
+plt.figure(figsize=(8, 4))
+plt.plot(weights, utilities, label='Expected Utility')
+plt.axvline(optimal_weight, color='r', linestyle='--', label='Optimal weight')
+plt.xlabel('BTC Allocation')
+plt.ylabel('Expected Utility')
+plt.title('Expected Utility vs BTC Allocation')
+plt.legend()
+plt.grid(True)
+plt.tight_layout()
+plt.savefig("utility_curve.png")
+print("Utility curve saved to utility_curve.png")
+
+# ─── PLOT WEALTH DISTRIBUTION ───────────────────────────────────────────────────
+
+r_samples = np.random.normal(mu, sigma, 1000)
+wealth_samples = INITIAL_WEALTH + optimal_weight * r_samples
+
+plt.figure(figsize=(8, 4))
+sns.histplot(wealth_samples, bins=50, kde=True)
+plt.axvline(INITIAL_WEALTH, color='r', linestyle='--', label='Initial Wealth')
+plt.xlabel('Simulated Future Wealth')
+plt.title('Wealth Distribution (Optimal BTC Allocation)')
+plt.legend()
+plt.tight_layout()
+plt.savefig("wealth_distribution.png")
+print("Wealth distribution saved to wealth_distribution.png")
+
+# ─── PLOT SIGMOID FUNCTION ──────────────────────────────────────────────────────
+
+wealth_vals = np.linspace(SIGMOID_W0 - 0.5, SIGMOID_W0 + 0.5, 500)
+sigmoid_vals = [utility(w) for w in wealth_vals]
+
+plt.figure(figsize=(8, 4))
+plt.plot(wealth_vals, sigmoid_vals, label=f'Sigmoid (k={SIGMOID_K}, w0={SIGMOID_W0})', color='blue')
+plt.axvline(SIGMOID_W0, color='grey', linestyle='--', label='Inflection point (w0)')
+plt.xlabel('Wealth')
+plt.ylabel('Utility')
+plt.title('Sigmoid Utility Function')
+plt.grid(True)
+plt.legend()
+plt.tight_layout()
+plt.savefig("sigmoid_utility.png")
+print("Saved plot to sigmoid_utility.png")
