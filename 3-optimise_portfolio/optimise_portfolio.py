@@ -19,9 +19,9 @@ ORIGINAL_LOG_CSV = '../0-data/btc_monthly_prices.csv'
 
 INITIAL_WEALTH = 1.0
 NORMALISE_RETURNS = True
-UTILITY_FUNCTION = 'sigmoid'
+UTILITY_FUNCTION = 'tanh'
 SIGMOID_K = 25.0
-SIGMOID_W0 = 0.98
+W0 = 0.98
 PREDICT_INDEX_OFFSET = 18  # months
 Y_LIMIT = (4, 18)
 
@@ -44,9 +44,11 @@ def utility(w):
     elif UTILITY_FUNCTION == 'sqrt':
         return np.sqrt(w) if w >= 0 else 0
     elif UTILITY_FUNCTION == 'sigmoid':
-        return 1 / (1 + np.exp(-SIGMOID_K * (w - SIGMOID_W0)))
+        return 1 / (1 + np.exp(-SIGMOID_K * (w - W0)))
+    elif UTILITY_FUNCTION == 'tanh':
+        return np.tanh(SIGMOID_K * (w - W0))
     else:
-        raise ValueError("Unsupported utility function")
+        raise ValueError(f"Unsupported utility function: {UTILITY_FUNCTION}")
 
 def expected_utility(weight, mu, sigma):
     def integrand(r):
@@ -105,18 +107,30 @@ plt.tight_layout()
 plt.savefig("wealth_distribution.png")
 print("Saved wealth_distribution.png")
 
-# Sigmoid function
-wealth_vals = np.linspace(SIGMOID_W0 - 0.5, SIGMOID_W0 + 0.5, 500)
-sigmoid_vals = [utility(w) for w in wealth_vals]
+# Utility function plot
+if UTILITY_FUNCTION == 'log':
+    wealth_vals = np.linspace(0.01, 3, 500)
+elif UTILITY_FUNCTION == 'sqrt':
+    wealth_vals = np.linspace(0, 3, 500)
+elif UTILITY_FUNCTION in ['sigmoid', 'tanh']:
+    wealth_vals = np.linspace(W0 - 1.0, W0 + 1.0, 500)
+else:
+    raise ValueError(f"Unsupported utility function: {UTILITY_FUNCTION}")
+
+utility_vals = [utility(w) for w in wealth_vals]
 
 plt.figure(figsize=(8, 4))
-plt.plot(wealth_vals, sigmoid_vals, label=f'Sigmoid (k={SIGMOID_K}, w0={SIGMOID_W0})', color='blue')
-plt.axvline(SIGMOID_W0, color='grey', linestyle='--', label='Inflection point (w0)')
+plt.plot(wealth_vals, utility_vals, label=f'{UTILITY_FUNCTION.capitalize()} utility', color='blue')
+
+if UTILITY_FUNCTION in ['sigmoid', 'tanh']:
+    plt.axvline(W0, color='grey', linestyle='--', label='Inflection point (w0)')
+
 plt.xlabel('Wealth')
 plt.ylabel('Utility')
-plt.title('Sigmoid Utility Function')
+plt.title('Utility Function')
 plt.grid(True)
 plt.legend()
 plt.tight_layout()
-plt.savefig("sigmoid_utility.png")
-print("Saved sigmoid_utility.png")
+plt.savefig("utility_func.png")
+print("Saved utility_func.png")
+
