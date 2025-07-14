@@ -5,29 +5,32 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import joblib
 
+from dataclasses import dataclass
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import RBF, ConstantKernel as C, WhiteKernel, ExpSineSquared
 
-DATA_PATH = '../0-data/btc_monthly_prices.csv'
-LOG_PKL_PATH = '../1-log-fit/log_trend_params.pkl'
-GP_PKL_PATH = 'gp_model.pkl'
-X_PRED_PKL = 'X_pred.npy'
-Y_PRED_PKL = 'y_pred.npy'
-YSTD_PKL = 'y_std.npy'
-PLOT_PATH = 'gp_output.png'
-MONTHS_INTO_FUTURE = 48
-Y_LIMIT = (4, 18)
+@dataclass(frozen=True)
+class Config:
+    data_path: str ='../0-data/btc_monthly_prices.csv'
+    log_pkl_path: str ='../1-log-fit/log_trend_params.pkl'
+    gp_pkl_path: str ='gp_model.pkl'
+    x_pred_pkl: str ='X_pred.npy'
+    y_pred_pkl: str ='y_pred.npy'
+    y_std_pkl: str ='y_std.npy'
+    plot_path: str ='gp_output.png'
+    months_into_future: int =48
+    y_limit: tuple =(4, 18)
 
-def load_data(path):
-    df = pd.read_csv(path, sep=';')
+def load_data(cfg: Config):
+    df = pd.read_csv(cfg.data_path, sep=';')
     df['timestamp'] = pd.to_datetime(df['timestamp'])
     df = df.sort_values(by='timestamp')
     y = np.log(df['close'].astype(float).values)
     X = np.arange(len(y)).reshape(-1, 1)
     return X, y
 
-def load_log_trend(pkl_path):
-    params = joblib.load(pkl_path)
+def load_log_trend(cfg: Config):
+    params = joblib.load(cfg.log_pkl_path)
     def trend(x):
         return params[0] * np.log(params[1] * x + 1) + params[2]
     return trend
@@ -54,19 +57,19 @@ def fit_gp(X, residuals, kernel):
     gp.fit(X, residuals)
     return gp
 
-def predict_gp(gp, X, months_ahead, trend_func):
-    X_pred = np.linspace(0, len(X) + months_ahead, 700).reshape(-1, 1)
+def predict_gp(gp, X, trend_func, cfg: Config):
+    X_pred = np.linspace(0, len(X) + cfg.months_into_future, 700).reshape(-1, 1)
     y_resid_pred, y_std = gp.predict(X_pred, return_std=True)
     y_pred = y_resid_pred + trend_func(X_pred.ravel())
     return X_pred, y_pred, y_std
 
-def save_outputs(gp, X_pred, y_pred, y_std):
-    joblib.dump(gp, GP_PKL_PATH, compress=0)
-    np.save(X_PRED_PKL, X_pred)
-    np.save(Y_PRED_PKL, y_pred)
-    np.save(YSTD_PKL, y_std)
+def save_outputs(gp, X_pred, y_pred, y_std, cfg: Config):
+    joblib.dump(gp, cfg.gp_pkl_path, compress=0)
+    np.save(cfg.x_pred_pkl, X_pred)
+    np.save(cfg.y_pred_pkl, y_pred)
+    np.save(cfg.y_std_pkl, y_std)
 
-def plot_results(X, y, X_pred, y_pred, y_std):
+def plot_results(X, y, X_pred, y_pred, y_std, cfg: Config):
     fig, ax = plt.subplots(figsize=(10, 6))
     ax.plot(X, y, 'kx', label='Observed BTC prices')
     ax.plot(X_pred, y_pred, 'b-', label='GP mean prediction')
@@ -76,22 +79,24 @@ def plot_results(X, y, X_pred, y_pred, y_std):
     ax.set_title('Gaussian Process Regression on BTC Weekly Prices')
     ax.legend()
     ax.grid(True)
-    ax.set_ylim(*Y_LIMIT)
+    ax.set_ylim(*cfg.y_limit)
     fig.tight_layout()
-    fig.savefig(PLOT_PATH)
+    fig.savefig(cfg.plot_path)
     plt.close('all')
 
 def main():
-    X, y = load_data(DATA_PATH)
-    log_trend = load_log_trend(LOG_PKL_PATH)
+    cfg = Config()
+
+    X, y = load_data(cfg)
+    log_trend = load_log_trend(cfg)
     residuals = y - log_trend(X.ravel())
 
     kernel = build_kernel()
     gp = fit_gp(X, residuals, kernel)
-    X_pred, y_pred, y_std = predict_gp(gp, X, MONTHS_INTO_FUTURE, log_trend)
+    X_pred, y_pred, y_std = predict_gp(gp, X, log_trend, cfg)
 
-    save_outputs(gp, X_pred, y_pred, y_std)
-    plot_results(X, y, X_pred, y_pred, y_std)
+    save_outputs(gp, X_pred, y_pred, y_std, cfg)
+    plot_results(X, y, X_pred, y_pred, y_std, cfg)
 
 if __name__ == '__main__':
     main()
