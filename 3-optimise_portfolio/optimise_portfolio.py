@@ -14,7 +14,7 @@ class Config:
     x_pred_pkl: str = '../2-gp_fit/X_pred.npy'
     y_pred_pkl: str = '../2-gp_fit/y_pred.npy'
     ystd_pkl: str = '../2-gp_fit/y_std.npy'
-    log_csv: str = '../0-data/btc_monthly_prices.csv'
+    log_csv: str = '../0-data/btc_weekly_prices.csv'
     initial_wealth: float = 1.0
     normalise_returns: bool = True
     utility_function: str = 'tanh'
