@@ -23,8 +23,8 @@ LENGTH_SCALE = 20.0               # GP RBF kernel length scale
 CONFIDENCE_BAND = True            # plot GP std dev band
 Y_LIMIT = (0, 150000)             # y-axis plot limits
 NORMALISE_RETURNS = True          # convert price difference to percentage return
-SIGMOID_K = 500.0                   # steepness of sigmoid
-SIGMOID_W0 = 1.0                  # inflection point of sigmoid (target wealth)
+SIGMOID_K = 50.0                   # steepness of sigmoid
+SIGMOID_W0 = 0.95                # inflection point of sigmoid (target wealth)
 
 # ─── LOAD DATA ──────────────────────────────────────────────────────────────────
 
