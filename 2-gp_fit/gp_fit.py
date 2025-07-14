@@ -37,12 +37,10 @@ def load_log_trend(cfg: Config):
 
 def build_kernel():
     return (
-            RBF(length_scale=200.0, length_scale_bounds=(10.0, 500.0)) +
-
-            ExpSineSquared(length_scale=10.0, periodicity=208.0,
-                           length_scale_bounds=(1.0, 100.0),
-                           periodicity_bounds=(205, 210)) +
-                           
+        C(1.0, (1e-3, 1e3)) * RBF(length_scale=200.0, length_scale_bounds=(10.0, 500.0)) +
+        C(1.0, (1e-3, 1e3)) * ExpSineSquared(length_scale=10.0, periodicity=208.0,
+                                             length_scale_bounds=(1.0, 100.0),
+                                             periodicity_bounds=(205, 210)) +
         WhiteKernel(noise_level=0.25, noise_level_bounds=(0.1, 10.0))
     )
 
