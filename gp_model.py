@@ -1,6 +1,7 @@
 import matplotlib
 matplotlib.use('Agg')  # Use non-interactive backend for headless environments
 
+import joblib
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -15,17 +16,24 @@ import time
 # ─── CONTROL PANEL ──────────────────────────────────────────────────────────────
 
 DATA_PATH = 'data/btc_monthly_prices.csv'
-PREDICT_WEEKS_FORWARD = 12         # how many weeks ahead to evaluate return
 INITIAL_WEALTH = 1.0              # starting capital
-UTILITY_FUNCTION = 'sigmoid'      # choices: 'log', 'sqrt', 'sigmoid'
-NOISE_LEVEL = 0.25e-1                # GP WhiteKernel noise
-LENGTH_SCALE = 20.0               # GP RBF kernel length scale
 CONFIDENCE_BAND = True            # plot GP std dev band
-Y_LIMIT = (4, 18)             # y-axis plot limits
 NORMALISE_RETURNS = True          # convert price difference to percentage return
+
+UTILITY_FUNCTION = 'sigmoid'      # choices: 'log', 'sqrt', 'sigmoid'
 SIGMOID_K = 25.0                   # steepness of sigmoid
 SIGMOID_W0 = 0.98             # inflection point of sigmoid (target wealth)
-period_months = 48               # 4 years
+
+Y_LIMIT = (4, 18)             # y-axis plot limits
+MONTHS_INTO_FUTURE = 48
+
+# ─── Kernel Hyperparameters
+NOISE_LEVEL = 5e-1                # GP WhiteKernel noise
+LENGTH_SCALE_SE = 50.0               # GP RBF kernel length scale
+
+LENGTH_SCALE_SIN = 1.0
+PERIOD_MONTHS = 48
+
 
 # ─── LOAD DATA ──────────────────────────────────────────────────────────────────
 
@@ -56,26 +64,39 @@ print(f"y min: {np.min(y):.2f}, y max: {np.max(y):.2f}")
 
 # ─── GP DEFINITION ──────────────────────────────────────────────────────────────
 
+# Load fitted log trend
+log_params = joblib.load("log_trend_params.pkl")
+
+def log_trend(x):
+    return log_params[0] * np.log(log_params[1] * x + 1) + log_params[2]
+
+# Compute residuals from log trend
+X_flat = X.ravel()
+trend_vals = log_trend(X_flat)
+residuals = y - trend_vals
+
+# Define kernel without DotProduct
 kernel = (
     C(1.0, constant_value_bounds="fixed") *
     (
-        RBF(length_scale=LENGTH_SCALE, length_scale_bounds="fixed") +
-        ExpSineSquared(length_scale=10.0, periodicity=period_months, length_scale_bounds="fixed", periodicity_bounds="fixed") +
-        DotProduct(sigma_0=1.0, sigma_0_bounds="fixed")  # ← linear trend kernel
+        RBF(length_scale=LENGTH_SCALE_SE, length_scale_bounds="fixed") +
+        ExpSineSquared(length_scale=LENGTH_SCALE_SIN, periodicity=PERIOD_MONTHS, length_scale_bounds="fixed", periodicity_bounds="fixed")
     ) +
     WhiteKernel(noise_level=NOISE_LEVEL, noise_level_bounds="fixed")
 )
 
+# GP on residuals
 gp = GaussianProcessRegressor(kernel=kernel, optimizer=None, normalize_y=True)
+gp.fit(X, residuals)
 
-# ─── FIT AND PREDICT ────────────────────────────────────────────────────────────
+# Predict residuals
+X_pred = np.linspace(0, len(X) + MONTHS_INTO_FUTURE, 700).reshape(-1, 1)
+y_resid_pred, y_std = gp.predict(X_pred, return_std=True)
 
+# Add trend back
 start = time.time()
-gp.fit(X, y)
-months_into_future = 48  # 4 years
-X_pred = np.linspace(0, len(X) + months_into_future, 700).reshape(-1, 1)
-
-y_pred, y_std = gp.predict(X_pred, return_std=True)
+y_resid_pred, y_std = gp.predict(X_pred, return_std=True)
+y_pred = y_resid_pred + log_trend(X_pred.ravel())
 end = time.time()
 
 print(f"\nGP fit + predict completed in {end - start:.3f} seconds")
@@ -103,8 +124,8 @@ def expected_utility(weight, mu, sigma):
 
 # ─── TARGET PREDICTION POINT ────────────────────────────────────────────────────
 
-months_into_future_index = X[-1][0] + months_into_future
-target_index = np.searchsorted(X_pred.ravel(), months_into_future_index)
+MONTHS_INTO_FUTURE_index = X[-1][0] + MONTHS_INTO_FUTURE
+target_index = np.searchsorted(X_pred.ravel(), MONTHS_INTO_FUTURE_index)
 target_index = min(target_index, len(y_pred) - 1)
 
 price_now = y[-1]
@@ -112,9 +133,9 @@ price_pred = y_pred[target_index]
 mu = (price_pred - price_now) / price_now if NORMALISE_RETURNS else price_pred - price_now
 sigma = y_std[target_index] / price_now if NORMALISE_RETURNS else y_std[target_index]
 
-print(f"\nExpected BTC return over {months_into_future} months: {mu:.6f}")
+print(f"\nExpected BTC return over {MONTHS_INTO_FUTURE} months: {mu:.6f}")
 
-print(f"Predicted standard deviation over {PREDICT_WEEKS_FORWARD} weeks: {sigma:.6f}")
+print(f"Predicted standard deviation over {MONTHS_INTO_FUTURE} weeks: {sigma:.6f}")
 
 # ─── OPTIMISE ALLOCATION ────────────────────────────────────────────────────────
 
