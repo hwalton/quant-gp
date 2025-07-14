@@ -14,23 +14,39 @@ import time
 
 # ─── CONTROL PANEL ──────────────────────────────────────────────────────────────
 
-DATA_PATH = 'data/btc_weekly_prices.csv'
+DATA_PATH = 'data/btc_monthly_prices.csv'
 PREDICT_WEEKS_FORWARD = 12         # how many weeks ahead to evaluate return
 INITIAL_WEALTH = 1.0              # starting capital
 UTILITY_FUNCTION = 'sigmoid'      # choices: 'log', 'sqrt', 'sigmoid'
 NOISE_LEVEL = 3e-1                # GP WhiteKernel noise
 LENGTH_SCALE = 20.0               # GP RBF kernel length scale
 CONFIDENCE_BAND = True            # plot GP std dev band
-Y_LIMIT = (0, 150000)             # y-axis plot limits
+Y_LIMIT = (4, 20)             # y-axis plot limits
 NORMALISE_RETURNS = True          # convert price difference to percentage return
-SIGMOID_K = 50.0                   # steepness of sigmoid
-SIGMOID_W0 = 0.95                # inflection point of sigmoid (target wealth)
+SIGMOID_K = 25.0                   # steepness of sigmoid
+SIGMOID_W0 = 0.98             # inflection point of sigmoid (target wealth)
 
 # ─── LOAD DATA ──────────────────────────────────────────────────────────────────
 
-df = pd.read_csv(DATA_PATH)
-X = np.arange(len(df)).reshape(-1, 1)
-y = df['price_usd'].values
+# Read the semicolon-separated file
+df = pd.read_csv(DATA_PATH, sep=';')
+
+# Parse timestamp column to datetime
+df['timestamp'] = pd.to_datetime(df['timestamp'])
+
+# Sort just in case
+df = df.sort_values(by='timestamp')
+
+# Extract the close price and convert to float
+y = np.log(df['close'].astype(float).values)
+
+# Time index for GP
+X = np.arange(len(y)).reshape(-1, 1)
+
+print("First few rows of CSV data:")
+print(df[['timestamp', 'close']].head())
+print(f"\nX shape: {X.shape}, y shape: {y.shape}")
+print(f"y min: {np.min(y):.2f}, y max: {np.max(y):.2f}")
 
 print("First few rows of CSV data:")
 print(df.head())
