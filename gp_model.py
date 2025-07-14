@@ -83,8 +83,8 @@ kernel = (
         ExpSineSquared(length_scale=1.0, periodicity=48.0,
                        length_scale_bounds=(1e-2, 1e2),
                        periodicity_bounds=(12, 96))  # ~1-8 years
-    ) +
-    WhiteKernel(noise_level=0.5, noise_level_bounds=(1e-5, 1e1))
+    )
+    + WhiteKernel(noise_level=0.5, noise_level_bounds=(5e-1, 1e1))
 )
 
 # GP with optimiser enabled
