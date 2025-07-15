@@ -15,19 +15,12 @@ source venv/bin/activate
 pip install -q -r requirements.txt
 
 # Run analysis pipeline
-echo "1. Running log trend fitting..."
-cd 1-log-fit && python log-fit.py && cd ..
-
-echo "2. Running Gaussian Process fitting..."
-cd 2-gp_fit && python gp_fit.py && cd ..
-
-echo "3. Running portfolio optimization..."
-cd 3-optimise_portfolio && python optimise_portfolio.py && cd ..
+echo "1. Running modular GP-based portfolio optimization..."
+python gp-model/run_pipeline.py --utility crra --wealth 1000 --offset 10 --gamma 2.0
 
 # Copy images to web directory
-echo "4. Copying images to web directory..."
-cp 2-gp_fit/gp_output.png web/static/images/ 2>/dev/null || true
-cp 3-optimise_portfolio/*.png web/static/images/ 2>/dev/null || true
+echo "2. Copying images to web directory..."
+cp gp-model/outputs/*.png web/static/images/ 2>/dev/null || true
 
 echo "Analysis complete! Images updated in web/static/images/"
 echo "Run 'make dev' to start the web server."

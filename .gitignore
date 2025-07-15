@@ -1,11 +1,41 @@
-venv
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Analysis artifacts (generated files)
 *.pkl
 *.npy
+
+# Generated plots (these will be in web/static/images)
+gp-model/outputs/*.png
+0-data/*.csv
+1-log-fit/*.pkl
+1-log-fit/*.png
+2-gp_fit/*.pkl
+2-gp_fit/*.npy
+2-gp_fit/*.png
+3-optimise_portfolio/*.png
 
 # Build artifacts
 bin/
 tmp/
 *.log
 
-# Keep web static images
+# Keep web static images (these are the final outputs we want to serve)
 !web/static/images/*.png
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
