@@ -111,7 +111,7 @@ def plot_wealth_distribution(mu, sigma, current_log_price, optimal_weight, cfg: 
     plt.axvline(cfg.initial_wealth, color='r', linestyle='--', label='Initial Wealth', linewidth=2)
     plt.xlabel('Simulated Future Wealth ($)')
     plt.ylabel('Probability Density')
-    plt.title('Wealth Distribution')
+    plt.title('Wealth Distribution of Optimal Portfolio')
     
     # Fixed scale: always 0 to 2x initial wealth
     plt.xlim(0, 2 * cfg.initial_wealth)
