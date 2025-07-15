@@ -15,9 +15,9 @@ class Config:
     y_pred_pkl: str = '../2-gp_fit/y_pred.npy'
     ystd_pkl: str = '../2-gp_fit/y_std.npy'
     log_csv: str = '../0-data/btc_weekly_prices.csv'
-    initial_wealth: float = 1.0
+    initial_wealth: float = 100000
     normalise_returns: bool = True
-    utility_function: str = 'tanh'
+    utility_function: str = 'identity'
     sigmoid_k: float = 25.0
     w0: float = 0.98
     predict_index_offset: int = 4
@@ -32,7 +32,9 @@ def load_data(cfg: Config):
     return X_pred, y_pred, y_std, y_actual
 
 def get_utility_func(cfg: Config):
-    if cfg.utility_function == 'log':
+    if cfg.utility_function == 'identity' or cfg.utility_function == 'linear':
+        return lambda w: w
+    elif cfg.utility_function == 'log':
         return lambda w: np.log(w) if w > 0 else -np.inf
     elif cfg.utility_function == 'sqrt':
         return lambda w: np.sqrt(w) if w >= 0 else 0
@@ -99,6 +101,8 @@ def plot_utility_function(cfg: Config):
         x_vals = np.linspace(0, 3, 500)
     elif cfg.utility_function in ['sigmoid', 'tanh']:
         x_vals = np.linspace(cfg.w0 - 1.0, cfg.w0 + 1.0, 500)
+    elif cfg.utility_function in ['identity', 'linear']:
+        x_vals = np.linspace(0, 3, 500)
     else:
         raise ValueError(f"Unsupported utility function: {cfg.utility_function}")
 
@@ -122,7 +126,7 @@ def main():
     X_pred, y_pred, y_std, y_actual = load_data(cfg)
     mu, sigma = compute_gp_stats(X_pred, y_pred, y_std, y_actual, cfg)
 
-    print(f"\nExpected BTC return over {cfg.predict_index_offset} months: {mu:.6f}")
+    print(f"\nExpected BTC return over {cfg.predict_index_offset} closes: {mu:.6f}")
     print(f"Predicted standard deviation: {sigma:.6f}")
 
     optimal_weight = optimise_allocation(mu, sigma, cfg)
