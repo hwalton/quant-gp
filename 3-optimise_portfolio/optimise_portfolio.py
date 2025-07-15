@@ -133,7 +133,7 @@ def plot_wealth_distribution(mu, sigma, current_log_price, optimal_weight, cfg: 
     
     # Add some statistics as text
     mean_wealth = np.average(wealth_vals, weights=pdf_vals)
-    plt.text(0.02, 0.98, f'Mean wealth: ${mean_wealth:.2f}\nOptimal BTC: {optimal_weight:.1%}', 
+    plt.text(0.02, 0.98, f'Expected Wealth: ${mean_wealth:.2f}\nOptimal BTC: {optimal_weight:.1%}', 
              transform=plt.gca().transAxes, verticalalignment='top', 
              bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8))
     
