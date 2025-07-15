@@ -16,12 +16,13 @@ class Config:
     ystd_pkl: str = '../2-gp_fit/y_std.npy'
     log_csv: str = '../0-data/btc_weekly_prices.csv'
     initial_wealth: float = 1000
-    utility_function: str = ['step', 'sigmoid', 'tanh', 'tanh_custom', 'identity', 'linear', 'log', 'sqrt', 'crra'][3]
+    utility_function: str = ['step', 'smooth_step', 'sigmoid', 'tanh', 'tanh_custom', 'identity', 'linear', 'log', 'sqrt', 'crra'][4]  # Use smooth_step
     sigmoid_k: float = 25.0
     w0: float = 0.98
     predict_index_offset: int = 10
     y_limit: tuple = (4, 18)
-    step_threshold: float = 999
+    step_threshold: float = 1001
+    step_steepness: float = 100.0  # Controls how sharp the transition is
 
 def load_data(cfg: Config):
     X_pred = np.load(cfg.x_pred_pkl)
@@ -40,6 +41,17 @@ def get_utility_func(cfg: Config):
         return lambda w: np.sqrt(w) if w >= 0 else 0
     elif cfg.utility_function == 'step':
         return lambda w: 1.0 if w > cfg.step_threshold else 0.0
+    elif cfg.utility_function == 'smooth_step':
+        # Add numerical stability to prevent overflow
+        def smooth_step(w):
+            x = -cfg.step_steepness * (w - cfg.step_threshold)
+            if x > 500:  # Prevent overflow
+                return 0.0
+            elif x < -500:
+                return 1.0
+            else:
+                return 1 / (1 + np.exp(x))
+        return smooth_step
     elif cfg.utility_function == 'sigmoid':
         return lambda w: 1 / (1 + np.exp(-cfg.sigmoid_k * (w - cfg.w0)))
     elif cfg.utility_function == 'tanh':
@@ -155,7 +167,7 @@ def plot_utility_function(cfg: Config):
         x_vals = np.linspace(cfg.w0 - 1.0, cfg.w0 + 1.0, 500)
     elif cfg.utility_function in ['identity', 'linear']:
         x_vals = np.linspace(0, 3000, 500)
-    elif cfg.utility_function == 'step':
+    elif cfg.utility_function in ['step', 'smooth_step']:
         x_vals = np.linspace(0, 3000, 500)
     elif cfg.utility_function == 'tanh_custom':
         x_vals = np.linspace(0, 5000, 500)  # Wider range to see the tanh curve
@@ -170,7 +182,7 @@ def plot_utility_function(cfg: Config):
 
     if cfg.utility_function in ['sigmoid', 'tanh']:
         plt.axvline(cfg.initial_wealth, color='grey', linestyle='--', label=f'Initial wealth ({cfg.initial_wealth})')
-    elif cfg.utility_function == 'step':
+    elif cfg.utility_function in ['step', 'smooth_step']:
         plt.axvline(cfg.step_threshold, color='grey', linestyle='--', label=f'Threshold ({cfg.step_threshold})')
     elif cfg.utility_function == 'tanh_custom':
         plt.axvline(cfg.initial_wealth, color='grey', linestyle='--', label=f'Initial wealth ({cfg.initial_wealth})')
