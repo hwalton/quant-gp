@@ -16,11 +16,12 @@ class Config:
     ystd_pkl: str = '../2-gp_fit/y_std.npy'
     log_csv: str = '../0-data/btc_weekly_prices.csv'
     initial_wealth: float = 1000
-    utility_function: str = 'identity'
+    utility_function: str = ['step', 'sigmoid', 'tanh', 'identity', 'linear', 'log', 'sqrt'][3]
     sigmoid_k: float = 25.0
     w0: float = 0.98
     predict_index_offset: int = 10
     y_limit: tuple = (4, 18)
+    step_threshold: float = 999  # Add threshold parameter
 
 def load_data(cfg: Config):
     X_pred = np.load(cfg.x_pred_pkl)
@@ -37,6 +38,8 @@ def get_utility_func(cfg: Config):
         return lambda w: np.log(w) if w > 0 else -np.inf
     elif cfg.utility_function == 'sqrt':
         return lambda w: np.sqrt(w) if w >= 0 else 0
+    elif cfg.utility_function == 'step':
+        return lambda w: 1.0 if w > cfg.step_threshold else 0.0
     elif cfg.utility_function == 'sigmoid':
         return lambda w: 1 / (1 + np.exp(-cfg.sigmoid_k * (w - cfg.w0)))
     elif cfg.utility_function == 'tanh':
@@ -104,10 +107,12 @@ def plot_wealth_distribution(mu, sigma, current_log_price, optimal_weight, cfg: 
     plt.xlabel('Simulated Future Wealth')
     plt.ylabel('Probability Density')
     plt.title('Wealth Distribution')
+    plt.xscale('log')  # Add log scale for x-axis
     plt.grid(True)
     plt.legend()
     plt.tight_layout()
-    min_x = min(min(wealth_vals), cfg.initial_wealth)
+    # Include a reasonable range for log scale
+    min_x = max(1, min(wealth_vals))  # Avoid log(0)
     max_x = max(max(wealth_vals), cfg.initial_wealth)
     plt.xlim(min_x, max_x)
     plt.savefig("wealth_distribution.png")
@@ -115,13 +120,15 @@ def plot_wealth_distribution(mu, sigma, current_log_price, optimal_weight, cfg: 
 def plot_utility_function(cfg: Config):
     utility = get_utility_func(cfg)
     if cfg.utility_function == 'log':
-        x_vals = np.linspace(0.01, 3, 500)
+        x_vals = np.linspace(0.01, 3000, 500)
     elif cfg.utility_function == 'sqrt':
-        x_vals = np.linspace(0, 3, 500)
+        x_vals = np.linspace(0, 3000, 500)
     elif cfg.utility_function in ['sigmoid', 'tanh']:
         x_vals = np.linspace(cfg.w0 - 1.0, cfg.w0 + 1.0, 500)
     elif cfg.utility_function in ['identity', 'linear']:
-        x_vals = np.linspace(0, 3, 500)
+        x_vals = np.linspace(0, 3000, 500)
+    elif cfg.utility_function == 'step':
+        x_vals = np.linspace(0, 3000, 500)
     else:
         raise ValueError(f"Unsupported utility function: {cfg.utility_function}")
 
@@ -131,6 +138,8 @@ def plot_utility_function(cfg: Config):
 
     if cfg.utility_function in ['sigmoid', 'tanh']:
         plt.axvline(cfg.w0, color='grey', linestyle='--', label='Inflection point (w0)')
+    elif cfg.utility_function == 'step':
+        plt.axvline(cfg.step_threshold, color='grey', linestyle='--', label=f'Threshold ({cfg.step_threshold})')
 
     plt.xlabel('Wealth')
     plt.ylabel('Utility')
