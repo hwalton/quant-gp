@@ -5,19 +5,23 @@ import numpy as np
 from scipy.optimize import curve_fit
 import joblib
 import os
+from dataclasses import dataclass
 
-DATA_PATH = '../0-data/btc_weekly_prices.csv'
-OUTPUT_PKL = 'log_trend_params.pkl'
+@dataclass(frozen=True)
+class Config:
+    data_path: str = '../0-data/btc_weekly_prices.csv'
+    output_pkl: str = 'log_trend_params.pkl'
+    cycle_length: int = 208
 
-def load_data(path, cycle_length=208):
-    df = pd.read_csv(path, sep=';')
+def load_data(cfg: Config):
+    df = pd.read_csv(cfg.data_path, sep=';')
     df['timestamp'] = pd.to_datetime(df['timestamp'])
     df = df.sort_values(by='timestamp')
     y_all = np.log(df['close'].astype(float).values)
 
     # Trim to the most recent full number of cycles
     total_weeks = len(y_all)
-    usable_weeks = (total_weeks // cycle_length) * cycle_length
+    usable_weeks = (total_weeks // cfg.cycle_length) * cfg.cycle_length
     y = y_all[-usable_weeks:]
     X = np.arange(usable_weeks)
 
@@ -44,13 +48,14 @@ def save_params(params, output_path):
     print(f"Saved trend params to {output_path}")
 
 def main():
-    if not os.path.exists(DATA_PATH):
-        raise FileNotFoundError(f"Data file not found: {DATA_PATH}")
+    cfg = Config()
+    if not os.path.exists(cfg.data_path):
+        raise FileNotFoundError(f"Data file not found: {cfg.data_path}")
     
-    X, y = load_data(DATA_PATH)
+    X, y = load_data(cfg)
     params = fit_log_trend(X, y)
     print(f"Fitted log curve params: a={params[0]:.4f}, b={params[1]:.6f}, c={params[2]:.4f}")
-    save_params(params, OUTPUT_PKL)
+    save_params(params, cfg.output_pkl)
 
 if __name__ == '__main__':
     main()
