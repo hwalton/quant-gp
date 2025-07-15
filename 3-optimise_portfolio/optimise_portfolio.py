@@ -55,9 +55,9 @@ def get_utility_func(cfg: Config):
     elif cfg.utility_function == 'sigmoid':
         return lambda w: 1 / (1 + np.exp(-cfg.sigmoid_k * (w - cfg.w0)))
     elif cfg.utility_function == 'tanh':
-        return lambda w: np.tanh(cfg.sigmoid_k * (w - cfg.w0))
+        return lambda w: np.tanh((w - 800) / 20)
     elif cfg.utility_function == 'tanh_custom':
-        return lambda w: np.tanh((w - 600) / 200) + 1 + w / 5000
+        return lambda w: np.tanh((w - 700) / 150) + 1 + w / 5000
     elif cfg.utility_function == 'crra':
         gamma = 0.8
         return lambda w: (w**(1-gamma) - 1) / (1-gamma) if gamma != 1 else np.log(w)
@@ -163,13 +163,13 @@ def plot_utility_function(cfg: Config):
         x_vals = np.linspace(0.01, 3000, 500)
     elif cfg.utility_function == 'sqrt':
         x_vals = np.linspace(0, 3000, 500)
-    elif cfg.utility_function in ['sigmoid', 'tanh']:
+    elif cfg.utility_function in ['sigmoid']:
         x_vals = np.linspace(cfg.w0 - 1.0, cfg.w0 + 1.0, 500)
     elif cfg.utility_function in ['identity', 'linear']:
         x_vals = np.linspace(0, 3000, 500)
     elif cfg.utility_function in ['step', 'smooth_step']:
         x_vals = np.linspace(0, 3000, 500)
-    elif cfg.utility_function == 'tanh_custom':
+    elif cfg.utility_function in ['tanh','tanh_custom']:
         x_vals = np.linspace(0, 5000, 500)  # Wider range to see the tanh curve
     elif cfg.utility_function == 'crra':
         x_vals = np.linspace(0.01, 3000, 500)  # Start from 0.01 to avoid issues with power function
@@ -253,10 +253,17 @@ def main():
 
     mu, sigma, current_log_price = compute_gp_stats(X_pred, y_pred, y_std, y_actual, cfg)
 
+    # Calculate the actual returns
+    expected_log_return = mu - current_log_price
+    expected_percent_return = (np.exp(mu) / np.exp(current_log_price) - 1) * 100
+
     print(f"\nOriginal GP predictions:")
-    print(f"Expected BTC return over {cfg.predict_index_offset} closes: {mu:.6f}")
+    print(f"Current log price: {current_log_price:.6f}")
+    print(f"Predicted future log price: {mu:.6f}")
+    print(f"Expected log return: {expected_log_return:.6f}")
+    print(f"Expected % return: {expected_percent_return:.1f}%")
     print(f"Predicted standard deviation: {sigma:.6f}")
-    print(f"Sharpe-like ratio: {mu/sigma:.3f}")
+    print(f"Sharpe-like ratio: {expected_log_return/sigma:.3f}")
 
     optimal_weight = optimise_allocation(mu, sigma, current_log_price, cfg)
     print(f"Optimal BTC allocation: {optimal_weight:.3f}")
