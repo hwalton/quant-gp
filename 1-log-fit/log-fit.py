@@ -18,13 +18,11 @@ def load_data(cfg: Config):
     df['timestamp'] = pd.to_datetime(df['timestamp'])
     df = df.sort_values(by='timestamp')
     y_all = np.log(df['close'].astype(float).values)
-
-    # Trim to the most recent full number of cycles
-    total_weeks = len(y_all)
-    usable_weeks = (total_weeks // cfg.cycle_length) * cfg.cycle_length
-    y = y_all[-usable_weeks:]
-    X = np.arange(usable_weeks)
-
+    
+    # Use all data instead of trimming to cycles
+    y = y_all
+    X = np.arange(len(y))
+    
     return X, y
 
 def log_func(x, a, b, c):
