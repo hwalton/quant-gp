@@ -45,7 +45,7 @@ def get_utility_func(cfg: Config):
     elif cfg.utility_function == 'tanh':
         return lambda w: np.tanh(cfg.sigmoid_k * (w - cfg.w0))
     elif cfg.utility_function == 'tanh_custom':
-        return lambda w: np.tanh((w - 700) / 200) + 1
+        return lambda w: np.tanh((w - 900) / 200) + 1
     elif cfg.utility_function == 'crra':
         gamma = 0.8
         return lambda w: (w**(1-gamma) - 1) / (1-gamma) if gamma != 1 else np.log(w)
