@@ -15,12 +15,11 @@ class Config:
     y_pred_pkl: str = '../2-gp_fit/y_pred.npy'
     ystd_pkl: str = '../2-gp_fit/y_std.npy'
     log_csv: str = '../0-data/btc_weekly_prices.csv'
-    initial_wealth: float = 100000
-    normalise_returns: bool = True
+    initial_wealth: float = 1000
     utility_function: str = 'identity'
     sigmoid_k: float = 25.0
     w0: float = 0.98
-    predict_index_offset: int = 4
+    predict_index_offset: int = 10
     y_limit: tuple = (4, 18)
 
 def load_data(cfg: Config):
@@ -45,28 +44,34 @@ def get_utility_func(cfg: Config):
     else:
         raise ValueError(f"Unsupported utility function: {cfg.utility_function}")
 
-def expected_utility(weight, mu, sigma, cfg: Config):
+def expected_utility(pp, mu_log_price, sigma_log_price, current_log_price, cfg: Config):
     utility = get_utility_func(cfg)
-    def integrand(r):
-        wealth = cfg.initial_wealth + weight * r
-        return utility(wealth) * norm.pdf(r, loc=mu, scale=sigma)
-    result, _ = quad(integrand, mu - 6 * sigma, mu + 6 * sigma, limit=100)
-    return -result
+    
+    def integrand(pred_log_price):
+        # Portfolio calculation
+        cash_portion = cfg.initial_wealth * (1 - pp)
+        btc_units = (cfg.initial_wealth * pp) / np.exp(current_log_price)
+        btc_value = btc_units * np.exp(pred_log_price)
+        portfolio_value = cash_portion + btc_value
+        
+        return utility(portfolio_value) * norm.pdf(pred_log_price, loc=mu_log_price, scale=sigma_log_price)
+    
+    result, _ = quad(integrand, mu_log_price - 6*sigma_log_price, mu_log_price + 6*sigma_log_price)
+    return -result  # Negative for minimization
 
 def compute_gp_stats(X_pred, y_pred, y_std, y_actual, cfg: Config):
+    current_log_price = y_actual[-1]
     target_index = np.searchsorted(X_pred.ravel(), len(y_actual) + cfg.predict_index_offset)
-    price_now = y_actual[-1]
-    price_pred = y_pred[target_index]
-    mu = (price_pred - price_now) / price_now if cfg.normalise_returns else price_pred - price_now
-    sigma = y_std[target_index] / price_now if cfg.normalise_returns else y_std[target_index]
-    return mu, sigma
+    mu_log_price = y_pred[target_index]
+    sigma_log_price = y_std[target_index]
+    return mu_log_price, sigma_log_price, current_log_price
 
-def optimise_allocation(mu, sigma, cfg: Config):
-    return minimize_scalar(expected_utility, bounds=(0, 1), args=(mu, sigma, cfg), method='bounded').x
+def optimise_allocation(mu, sigma, current_log_price, cfg: Config):
+    return minimize_scalar(expected_utility, bounds=(0, 1), args=(mu, sigma, current_log_price, cfg), method='bounded').x
 
-def plot_expected_utility_curve(mu, sigma, optimal_weight, cfg: Config):
+def plot_expected_utility_curve(mu, sigma, current_log_price, optimal_weight, cfg: Config):
     weights = np.linspace(0, 1, 100)
-    utilities = [-expected_utility(w, mu, sigma, cfg) for w in weights]
+    utilities = [-expected_utility(w, mu, sigma, current_log_price, cfg) for w in weights]
     plt.figure(figsize=(8, 4))
     plt.plot(weights, utilities, label='Expected Utility')
     plt.axvline(optimal_weight, color='r', linestyle='--', label='Optimal weight')
@@ -78,10 +83,21 @@ def plot_expected_utility_curve(mu, sigma, optimal_weight, cfg: Config):
     plt.tight_layout()
     plt.savefig("utility_curve.png")
 
-def plot_wealth_distribution(mu, sigma, optimal_weight, cfg: Config):
-    r_vals = np.linspace(mu - 5 * sigma, mu + 5 * sigma, 1000)
-    pdf_vals = norm.pdf(r_vals, loc=mu, scale=sigma)
-    wealth_vals = cfg.initial_wealth + optimal_weight * r_vals
+def plot_wealth_distribution(mu, sigma, current_log_price, optimal_weight, cfg: Config):
+    pred_log_price_vals = np.linspace(mu - 5 * sigma, mu + 5 * sigma, 1000)
+    pdf_vals = norm.pdf(pred_log_price_vals, loc=mu, scale=sigma)
+    
+    # Calculate wealth using the same formula as in expected_utility
+    wealth_vals = []
+    for pred_log_price in pred_log_price_vals:
+        cash_portion = cfg.initial_wealth * (1 - optimal_weight)
+        btc_units = (cfg.initial_wealth * optimal_weight) / np.exp(current_log_price)
+        btc_value = btc_units * np.exp(pred_log_price)
+        portfolio_value = cash_portion + btc_value
+        wealth_vals.append(portfolio_value)
+    
+    wealth_vals = np.array(wealth_vals)
+    
     plt.figure(figsize=(8, 4))
     plt.plot(wealth_vals, pdf_vals, label='Wealth PDF')
     plt.axvline(cfg.initial_wealth, color='r', linestyle='--', label='Initial Wealth')
@@ -91,6 +107,9 @@ def plot_wealth_distribution(mu, sigma, optimal_weight, cfg: Config):
     plt.grid(True)
     plt.legend()
     plt.tight_layout()
+    min_x = min(min(wealth_vals), cfg.initial_wealth)
+    max_x = max(max(wealth_vals), cfg.initial_wealth)
+    plt.xlim(min_x, max_x)
     plt.savefig("wealth_distribution.png")
 
 def plot_utility_function(cfg: Config):
@@ -124,19 +143,19 @@ def plot_utility_function(cfg: Config):
 def main():
     cfg = Config()
     X_pred, y_pred, y_std, y_actual = load_data(cfg)
-    mu, sigma = compute_gp_stats(X_pred, y_pred, y_std, y_actual, cfg)
+    mu, sigma, current_log_price = compute_gp_stats(X_pred, y_pred, y_std, y_actual, cfg)
 
     print(f"\nExpected BTC return over {cfg.predict_index_offset} closes: {mu:.6f}")
     print(f"Predicted standard deviation: {sigma:.6f}")
 
-    optimal_weight = optimise_allocation(mu, sigma, cfg)
+    optimal_weight = optimise_allocation(mu, sigma, current_log_price, cfg)
     print(f"Optimal BTC allocation: {optimal_weight:.3f}")
     print(f"Optimal cash allocation: {1 - optimal_weight:.3f}")
 
-    plot_expected_utility_curve(mu, sigma, optimal_weight, cfg)
+    plot_expected_utility_curve(mu, sigma, current_log_price, optimal_weight, cfg)
     print("Saved utility_curve.png")
 
-    plot_wealth_distribution(mu, sigma, optimal_weight, cfg)
+    plot_wealth_distribution(mu, sigma, current_log_price, optimal_weight, cfg)
     print("Saved wealth_distribution.png")
 
     plot_utility_function(cfg)
