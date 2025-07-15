@@ -14,13 +14,7 @@ pip-delete-this-directory.txt
 
 # Generated plots (these will be in web/static/images)
 gp-model/outputs/*.png
-0-data/*.csv
-1-log-fit/*.pkl
-1-log-fit/*.png
-2-gp_fit/*.pkl
-2-gp_fit/*.npy
-2-gp_fit/*.png
-3-optimise_portfolio/*.png
+gp-model/data/*.csv
 
 # Build artifacts
 bin/

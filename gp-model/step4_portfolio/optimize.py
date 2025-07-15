@@ -10,8 +10,8 @@ from scipy.integrate import quad
 from scipy.optimize import minimize_scalar
 
 from config import GPModelConfig
-from data.loader import load_btc_data
-from gp_fit.fit import load_gp_outputs
+from step1_data.loader import load_btc_data
+from step3_gp_fit.fit import load_gp_outputs
 
 def get_utility_func(config: GPModelConfig):
     """Get utility function based on configuration."""
@@ -36,9 +36,9 @@ def get_utility_func(config: GPModelConfig):
     elif config.utility_function == 'sigmoid':
         return lambda w: 1 / (1 + np.exp(-config.sigmoid_k * (w - config.w0)))
     elif config.utility_function == 'tanh':
-        return lambda w: np.tanh((w - 200) / 200)
+        return lambda w: np.tanh((w - 800) / 20)
     elif config.utility_function == 'tanh_custom':
-        return lambda w: np.tanh((w - 2000) / 1000) + 1
+        return lambda w: np.tanh((w - 700) / 150) + 1 + w / 5000
     elif config.utility_function == 'crra':
         gamma = config.crra_gamma
         return lambda w: (w**(1-gamma) - 1) / (1-gamma) if gamma != 1 else np.log(w)

@@ -10,8 +10,8 @@ from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import RBF, ConstantKernel as C, WhiteKernel, ExpSineSquared
 
 from config import GPModelConfig
-from data.loader import load_btc_data
-from log_fit.fit import load_log_params, create_log_trend_function
+from step1_data.loader import load_btc_data
+from step2_log_fit.fit import load_log_params, create_log_trend_function
 
 def build_kernel():
     """Build the GP kernel for Bitcoin price modeling."""

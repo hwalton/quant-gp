@@ -16,7 +16,7 @@ pip install -q -r requirements.txt
 
 # Run analysis pipeline
 echo "1. Running modular GP-based portfolio optimization..."
-python gp-model/run_pipeline.py --utility crra --wealth 1000 --offset 10 --gamma 2.0
+python gp-model/run_pipeline.py --utility tanh_custom --wealth 1000 --offset 4
 
 # Copy images to web directory
 echo "2. Copying images to web directory..."

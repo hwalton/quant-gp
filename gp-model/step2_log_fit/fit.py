@@ -5,7 +5,7 @@ import numpy as np
 import joblib
 from scipy.optimize import curve_fit
 from config import GPModelConfig
-from data.loader import load_btc_data
+from step1_data.loader import load_btc_data
 
 def log_func(x: np.ndarray, a: float, b: float, c: float) -> np.ndarray:
     """

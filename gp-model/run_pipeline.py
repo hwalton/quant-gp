@@ -5,10 +5,10 @@ from pathlib import Path
 import argparse
 
 from config import GPModelConfig
-from data.loader import load_btc_data
-from log_fit.fit import fit_log_trend
-from gp_fit.fit import run_gp_fit
-from portfolio.optimize import run_portfolio_optimization
+from step1_data.loader import load_btc_data
+from step2_log_fit.fit import fit_log_trend
+from step3_gp_fit.fit import run_gp_fit
+from step4_portfolio.optimize import run_portfolio_optimization
 
 def run_full_pipeline(config: GPModelConfig) -> dict:
     """
@@ -71,14 +71,14 @@ def run_full_pipeline(config: GPModelConfig) -> dict:
 def main():
     """Main entry point with command line argument parsing."""
     parser = argparse.ArgumentParser(description='Run GP-based portfolio optimization')
-    parser.add_argument('--utility', type=str, default='log',
+    parser.add_argument('--utility', type=str, default='tanh_custom',
                        choices=['identity', 'log', 'sqrt', 'step', 'smooth_step', 
                                'sigmoid', 'tanh', 'tanh_custom', 'crra'],
                        help='Utility function to use')
     parser.add_argument('--wealth', type=float, default=1000,
                        help='Initial wealth amount')
-    parser.add_argument('--offset', type=int, default=10,
-                       help='Prediction index offset')
+    parser.add_argument('--offset', type=int, default=4,
+                       help='Prediction index offset (weeks into future for weekly data)')
     parser.add_argument('--gamma', type=float, default=2.0,
                        help='Risk aversion parameter for CRRA utility')
     

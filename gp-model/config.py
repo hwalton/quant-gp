@@ -11,10 +11,10 @@ class GPModelConfig:
     
     # Paths
     base_dir: Path = Path(__file__).parent
-    data_dir: Path = base_dir / "data"
-    log_fit_dir: Path = base_dir / "log_fit" 
-    gp_fit_dir: Path = base_dir / "gp_fit"
-    portfolio_dir: Path = base_dir / "portfolio"
+    data_dir: Path = base_dir / "step1_data"
+    log_fit_dir: Path = base_dir / "step2_log_fit" 
+    gp_fit_dir: Path = base_dir / "step3_gp_fit"
+    portfolio_dir: Path = base_dir / "step4_portfolio"
     outputs_dir: Path = base_dir / "outputs"
     
     # Data files
@@ -41,8 +41,8 @@ class GPModelConfig:
     
     # Portfolio parameters
     initial_wealth: float = 1000
-    predict_index_offset: int = 10
-    utility_function: str = 'crra'  # Options: 'identity', 'log', 'sqrt', 'step', 'smooth_step', 'sigmoid', 'tanh', 'tanh_custom', 'crra'
+    predict_index_offset: int = 4  # 4 weeks into the future
+    utility_function: str = 'tanh_custom'  # Options: 'identity', 'log', 'sqrt', 'step', 'smooth_step', 'sigmoid', 'tanh', 'tanh_custom', 'crra'
     
     # Utility function specific parameters
     sigmoid_k: float = 25.0
