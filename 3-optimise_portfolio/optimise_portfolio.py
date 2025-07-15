@@ -16,12 +16,12 @@ class Config:
     ystd_pkl: str = '../2-gp_fit/y_std.npy'
     log_csv: str = '../0-data/btc_weekly_prices.csv'
     initial_wealth: float = 1000
-    utility_function: str = ['step', 'sigmoid', 'tanh', 'identity', 'linear', 'log', 'sqrt'][3]
+    utility_function: str = ['step', 'sigmoid', 'tanh', 'tanh_custom', 'identity', 'linear', 'log', 'sqrt', 'crra'][3]
     sigmoid_k: float = 25.0
     w0: float = 0.98
     predict_index_offset: int = 10
     y_limit: tuple = (4, 18)
-    step_threshold: float = 999  # Add threshold parameter
+    step_threshold: float = 999
 
 def load_data(cfg: Config):
     X_pred = np.load(cfg.x_pred_pkl)
@@ -44,6 +44,11 @@ def get_utility_func(cfg: Config):
         return lambda w: 1 / (1 + np.exp(-cfg.sigmoid_k * (w - cfg.w0)))
     elif cfg.utility_function == 'tanh':
         return lambda w: np.tanh(cfg.sigmoid_k * (w - cfg.w0))
+    elif cfg.utility_function == 'tanh_custom':
+        return lambda w: np.tanh((w - 700) / 200) + 1
+    elif cfg.utility_function == 'crra':
+        gamma = 0.8
+        return lambda w: (w**(1-gamma) - 1) / (1-gamma) if gamma != 1 else np.log(w)
     else:
         raise ValueError(f"Unsupported utility function: {cfg.utility_function}")
 
@@ -101,21 +106,38 @@ def plot_wealth_distribution(mu, sigma, current_log_price, optimal_weight, cfg: 
     
     wealth_vals = np.array(wealth_vals)
     
-    plt.figure(figsize=(8, 4))
-    plt.plot(wealth_vals, pdf_vals, label='Wealth PDF')
-    plt.axvline(cfg.initial_wealth, color='r', linestyle='--', label='Initial Wealth')
-    plt.xlabel('Simulated Future Wealth')
+    plt.figure(figsize=(10, 6))
+    plt.plot(wealth_vals, pdf_vals, label='Wealth PDF', linewidth=2)
+    plt.axvline(cfg.initial_wealth, color='r', linestyle='--', label='Initial Wealth', linewidth=2)
+    plt.xlabel('Simulated Future Wealth ($)')
     plt.ylabel('Probability Density')
     plt.title('Wealth Distribution')
-    plt.xscale('log')  # Add log scale for x-axis
-    plt.grid(True)
+    
+    # Fixed scale: always 0 to 2x initial wealth
+    plt.xlim(0, 2 * cfg.initial_wealth)
+    
+    # Fix the x-axis formatting
+    ax = plt.gca()
+    ax.ticklabel_format(style='plain', axis='x')  # No scientific notation
+    
+    # Set clean tick spacing every $200
+    tick_spacing = 200
+    ax.set_xticks(np.arange(0, 3 * cfg.initial_wealth + tick_spacing, tick_spacing))
+    
+    # Format x-axis labels as integers
+    ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${int(x)}'))
+    
+    plt.grid(True, alpha=0.3)
     plt.legend()
     plt.tight_layout()
-    # Include a reasonable range for log scale
-    min_x = max(1, min(wealth_vals))  # Avoid log(0)
-    max_x = max(max(wealth_vals), cfg.initial_wealth)
-    plt.xlim(min_x, max_x)
-    plt.savefig("wealth_distribution.png")
+    
+    # Add some statistics as text
+    mean_wealth = np.average(wealth_vals, weights=pdf_vals)
+    plt.text(0.02, 0.98, f'Mean wealth: ${mean_wealth:.2f}\nOptimal BTC: {optimal_weight:.1%}', 
+             transform=plt.gca().transAxes, verticalalignment='top', 
+             bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8))
+    
+    plt.savefig("wealth_distribution.png", dpi=150)
 
 def plot_utility_function(cfg: Config):
     utility = get_utility_func(cfg)
@@ -129,6 +151,10 @@ def plot_utility_function(cfg: Config):
         x_vals = np.linspace(0, 3000, 500)
     elif cfg.utility_function == 'step':
         x_vals = np.linspace(0, 3000, 500)
+    elif cfg.utility_function == 'tanh_custom':
+        x_vals = np.linspace(0, 5000, 500)  # Wider range to see the tanh curve
+    elif cfg.utility_function == 'crra':
+        x_vals = np.linspace(0.01, 3000, 500)  # Start from 0.01 to avoid issues with power function
     else:
         raise ValueError(f"Unsupported utility function: {cfg.utility_function}")
 
@@ -137,9 +163,13 @@ def plot_utility_function(cfg: Config):
     plt.plot(x_vals, y_vals, label=f'{cfg.utility_function.capitalize()} utility', color='blue')
 
     if cfg.utility_function in ['sigmoid', 'tanh']:
-        plt.axvline(cfg.w0, color='grey', linestyle='--', label='Inflection point (w0)')
+        plt.axvline(cfg.initial_wealth, color='grey', linestyle='--', label=f'Initial wealth ({cfg.initial_wealth})')
     elif cfg.utility_function == 'step':
         plt.axvline(cfg.step_threshold, color='grey', linestyle='--', label=f'Threshold ({cfg.step_threshold})')
+    elif cfg.utility_function == 'tanh_custom':
+        plt.axvline(cfg.initial_wealth, color='grey', linestyle='--', label=f'Initial wealth ({cfg.initial_wealth})')
+    elif cfg.utility_function == 'crra':
+        plt.axvline(cfg.initial_wealth, color='grey', linestyle='--', label=f'Initial wealth ({cfg.initial_wealth})')
 
     plt.xlabel('Wealth')
     plt.ylabel('Utility')
@@ -152,10 +182,13 @@ def plot_utility_function(cfg: Config):
 def main():
     cfg = Config()
     X_pred, y_pred, y_std, y_actual = load_data(cfg)
+
     mu, sigma, current_log_price = compute_gp_stats(X_pred, y_pred, y_std, y_actual, cfg)
 
-    print(f"\nExpected BTC return over {cfg.predict_index_offset} closes: {mu:.6f}")
+    print(f"\nOriginal GP predictions:")
+    print(f"Expected BTC return over {cfg.predict_index_offset} closes: {mu:.6f}")
     print(f"Predicted standard deviation: {sigma:.6f}")
+    print(f"Sharpe-like ratio: {mu/sigma:.3f}")
 
     optimal_weight = optimise_allocation(mu, sigma, current_log_price, cfg)
     print(f"Optimal BTC allocation: {optimal_weight:.3f}")
