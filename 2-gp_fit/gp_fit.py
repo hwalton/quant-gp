@@ -40,7 +40,7 @@ def build_kernel():
         C(1.0, (1e-3, 1e3)) * RBF(length_scale=200.0, length_scale_bounds=(10.0, 2000.0)) +
         C(1.0, (1e-3, 1.0)) * ExpSineSquared(length_scale=10.0, periodicity=208.0,
                                              length_scale_bounds=(1.0, 100.0),
-                                             periodicity_bounds=(205, 210)) +
+                                             periodicity_bounds=(150, 300)) +
         WhiteKernel(noise_level=0.1, noise_level_bounds=(0.1, 200.0))
     )
 
