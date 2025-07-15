@@ -209,6 +209,61 @@ def plot_utility_function(config: GPModelConfig) -> None:
     plt.close()
     print(f"Saved utility function to {output_path}")
 
+def plot_utility_distribution(mu: float, sigma: float, current_log_price: float, 
+                             optimal_weight: float, config: GPModelConfig) -> None:
+    """Plot distribution of portfolio utility values."""
+    pred_log_price_vals = np.linspace(mu - 5 * sigma, mu + 5 * sigma, 1000)
+    pdf_vals = norm.pdf(pred_log_price_vals, loc=mu, scale=sigma)
+    
+    utility = get_utility_func(config)
+    
+    # Calculate wealth and utility using the same formula as in expected_utility
+    wealth_vals = []
+    utility_vals = []
+    for pred_log_price in pred_log_price_vals:
+        cash_portion = config.initial_wealth * (1 - optimal_weight)
+        btc_units = (config.initial_wealth * optimal_weight) / np.exp(current_log_price)
+        btc_value = btc_units * np.exp(pred_log_price)
+        portfolio_value = cash_portion + btc_value
+        
+        wealth_vals.append(portfolio_value)
+        utility_vals.append(utility(portfolio_value))
+    
+    wealth_vals = np.array(wealth_vals)
+    utility_vals = np.array(utility_vals)
+    
+    # Calculate expected utility
+    d_log_price = pred_log_price_vals[1] - pred_log_price_vals[0]
+    expected_utility_val = np.sum(utility_vals * pdf_vals * d_log_price)
+    
+    # Initial wealth utility for reference
+    initial_utility = utility(config.initial_wealth)
+    
+    plt.figure(figsize=(10, 6))
+    plt.plot(utility_vals, pdf_vals, label='Utility PDF', linewidth=2, color='purple')
+    plt.axvline(initial_utility, color='r', linestyle='--', 
+                label=f'Initial Utility: {initial_utility:.3f}', linewidth=2)
+    plt.axvline(expected_utility_val, color='orange', linestyle=':', 
+                label=f'Expected Utility: {expected_utility_val:.3f}', linewidth=2)
+    
+    plt.xlabel('Utility Value')
+    plt.ylabel('Probability Density')
+    plt.title('Distribution of Portfolio Utility')
+    
+    plt.grid(True, alpha=0.3)
+    plt.legend()
+    plt.tight_layout()
+    
+    # Add statistics text
+    plt.text(0.02, 0.98, f'Expected Utility: {expected_utility_val:.4f}\nOptimal BTC: {optimal_weight:.1%}', 
+             transform=plt.gca().transAxes, verticalalignment='top', 
+             bbox=dict(boxstyle='round', facecolor='lightcyan', alpha=0.8))
+    
+    output_path = config.outputs_dir / config.utility_dist_plot
+    plt.savefig(output_path, dpi=150)
+    plt.close()
+    print(f"Saved utility distribution to {output_path}")
+
 def run_portfolio_optimization(config: GPModelConfig) -> dict:
     """
     Run the complete portfolio optimization pipeline.
@@ -245,7 +300,9 @@ def run_portfolio_optimization(config: GPModelConfig) -> dict:
     print("\nGenerating visualizations...")
     plot_expected_utility_curve(mu, sigma, current_log_price, optimal_weight, config)
     plot_wealth_distribution(mu, sigma, current_log_price, optimal_weight, config)
+    plot_utility_distribution(mu, sigma, current_log_price, optimal_weight, config)
     plot_utility_function(config)
+    plot_utility_distribution(mu, sigma, current_log_price, optimal_weight, config)
     
     return {
         'optimal_btc_weight': optimal_weight,
