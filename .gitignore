@@ -1,4 +1,11 @@
 venv
-*.png
 *.pkl
 *.npy
+
+# Build artifacts
+bin/
+tmp/
+*.log
+
+# Keep web static images
+!web/static/images/*.png

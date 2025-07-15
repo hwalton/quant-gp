@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}}</title>
+    <meta name="description" content="{{.Description}}">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .chart-shadow {
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex justify-between items-center py-4">
+                <div class="flex items-center">
+                    <h1 class="text-2xl font-bold text-gray-800">QuantGP</h1>
+                </div>
+                <div class="hidden md:flex items-center space-x-8">
+                    <a href="#features" class="text-gray-600 hover:text-gray-900">Features</a>
+                    <a href="#analysis" class="text-gray-600 hover:text-gray-900">Analysis</a>
+                    <a href="#signup" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">Get Access</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="gradient-bg text-white py-20">
+        <div class="max-w-7xl mx-auto px-4 text-center">
+            <h1 class="text-5xl md:text-6xl font-bold mb-6">
+                AI-Powered Portfolio <br>
+                <span class="text-yellow-300">Optimization</span>
+            </h1>
+            <p class="text-xl md:text-2xl mb-8 text-gray-200 max-w-3xl mx-auto">
+                Advanced Gaussian Process modeling combined with utility theory to optimize your Bitcoin portfolio allocation with scientific precision.
+            </p>
+            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                <a href="#signup" class="bg-yellow-400 hover:bg-yellow-500 text-gray-900 px-8 py-4 rounded-lg text-lg font-semibold">
+                    Get Early Access
+                </a>
+                <a href="#analysis" class="border-2 border-white hover:bg-white hover:text-gray-900 px-8 py-4 rounded-lg text-lg font-semibold">
+                    View Analysis
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="py-20 bg-white">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-bold text-gray-900 mb-4">Advanced Quantitative Methods</h2>
+                <p class="text-xl text-gray-600 max-w-3xl mx-auto">
+                    Our platform combines cutting-edge machine learning with financial theory to provide optimal portfolio recommendations.
+                </p>
+            </div>
+            
+            <div class="grid md:grid-cols-3 gap-8">
+                <div class="text-center p-6">
+                    <div class="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-2">Gaussian Process Modeling</h3>
+                    <p class="text-gray-600">Sophisticated probabilistic modeling that captures uncertainty and provides confidence intervals for predictions.</p>
+                </div>
+                
+                <div class="text-center p-6">
+                    <div class="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-2">Utility Theory Optimization</h3>
+                    <p class="text-gray-600">Risk-aware portfolio optimization using utility functions that match your risk preferences and investment goals.</p>
+                </div>
+                
+                <div class="text-center p-6">
+                    <div class="bg-purple-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg class="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-2">Real-time Analysis</h3>
+                    <p class="text-gray-600">Monthly automated analysis with updated market data and optimized portfolio recommendations delivered to your inbox.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Analysis Section -->
+    <section id="analysis" class="py-20 bg-gray-50">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-bold text-gray-900 mb-4">Live Analysis Results</h2>
+                <p class="text-xl text-gray-600 max-w-3xl mx-auto">
+                    See our quantitative models in action with real Bitcoin market data and portfolio optimization results.
+                </p>
+            </div>
+            
+            <div class="grid md:grid-cols-2 gap-8">
+                <!-- GP Fit Chart -->
+                <div class="bg-white rounded-xl chart-shadow p-6">
+                    <h3 class="text-xl font-semibold mb-4 text-gray-900">Gaussian Process Price Prediction</h3>
+                    <div class="aspect-video bg-gray-100 rounded-lg flex items-center justify-center">
+                        <img src="/static/images/gp_output.png" alt="Gaussian Process Model" class="max-w-full h-auto rounded-lg">
+                    </div>
+                    <p class="text-sm text-gray-600 mt-4">
+                        Our GP model captures long-term trends and cyclical patterns in Bitcoin prices with uncertainty quantification.
+                    </p>
+                </div>
+                
+                <!-- Utility Function -->
+                <div class="bg-white rounded-xl chart-shadow p-6">
+                    <h3 class="text-xl font-semibold mb-4 text-gray-900">Utility Function</h3>
+                    <div class="aspect-video bg-gray-100 rounded-lg flex items-center justify-center">
+                        <img src="/static/images/utility_func.png" alt="Utility Function" class="max-w-full h-auto rounded-lg">
+                    </div>
+                    <p class="text-sm text-gray-600 mt-4">
+                        Risk preferences modeled through utility theory to determine optimal portfolio allocation.
+                    </p>
+                </div>
+                
+                <!-- Wealth Distribution -->
+                <div class="bg-white rounded-xl chart-shadow p-6">
+                    <h3 class="text-xl font-semibold mb-4 text-gray-900">Wealth Distribution</h3>
+                    <div class="aspect-video bg-gray-100 rounded-lg flex items-center justify-center">
+                        <img src="/static/images/wealth_distribution.png" alt="Wealth Distribution" class="max-w-full h-auto rounded-lg">
+                    </div>
+                    <p class="text-sm text-gray-600 mt-4">
+                        Probability distribution of future portfolio values under optimal allocation strategy.
+                    </p>
+                </div>
+                
+                <!-- Utility Curve -->
+                <div class="bg-white rounded-xl chart-shadow p-6">
+                    <h3 class="text-xl font-semibold mb-4 text-gray-900">Expected Utility Curve</h3>
+                    <div class="aspect-video bg-gray-100 rounded-lg flex items-center justify-center">
+                        <img src="/static/images/utility_curve.png" alt="Utility Curve" class="max-w-full h-auto rounded-lg">
+                    </div>
+                    <p class="text-sm text-gray-600 mt-4">
+                        Optimization curve showing how expected utility varies with Bitcoin allocation percentage.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works Section -->
+    <section class="py-20 bg-white">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-bold text-gray-900 mb-4">How It Works</h2>
+                <p class="text-xl text-gray-600 max-w-3xl mx-auto">
+                    Our three-stage process combines statistical modeling, machine learning, and optimization theory.
+                </p>
+            </div>
+            
+            <div class="grid md:grid-cols-3 gap-8">
+                <div class="text-center">
+                    <div class="bg-blue-600 text-white w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold">1</div>
+                    <h3 class="text-xl font-semibold mb-2">Data Collection & Trend Fitting</h3>
+                    <p class="text-gray-600">We collect and analyze Bitcoin price data, fitting logarithmic trend models to capture long-term growth patterns.</p>
+                </div>
+                
+                <div class="text-center">
+                    <div class="bg-blue-600 text-white w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold">2</div>
+                    <h3 class="text-xl font-semibold mb-2">Gaussian Process Modeling</h3>
+                    <p class="text-gray-600">Advanced probabilistic modeling captures market cycles and provides uncertainty estimates for future price predictions.</p>
+                </div>
+                
+                <div class="text-center">
+                    <div class="bg-blue-600 text-white w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold">3</div>
+                    <h3 class="text-xl font-semibold mb-2">Portfolio Optimization</h3>
+                    <p class="text-gray-600">Utility theory optimization determines the optimal Bitcoin allocation that maximizes expected utility given your risk profile.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Signup Section -->
+    <section id="signup" class="py-20 gradient-bg text-white">
+        <div class="max-w-4xl mx-auto px-4 text-center">
+            <h2 class="text-4xl font-bold mb-6">Get Early Access</h2>
+            <p class="text-xl mb-8 text-gray-200 max-w-2xl mx-auto">
+                Join our waitlist to be among the first to access our AI-powered portfolio optimization platform.
+            </p>
+            
+            <div x-data="signupForm()" class="max-w-md mx-auto">
+                <form @submit.prevent="submitForm" class="space-y-4">
+                    <div>
+                        <input 
+                            type="text" 
+                            x-model="form.name"
+                            placeholder="Your Name" 
+                            required
+                            class="w-full px-4 py-3 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                        >
+                    </div>
+                    <div>
+                        <input 
+                            type="email" 
+                            x-model="form.email"
+                            placeholder="Your Email" 
+                            required
+                            class="w-full px-4 py-3 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                        >
+                    </div>
+                    <button 
+                        type="submit"
+                        :disabled="loading"
+                        class="w-full bg-yellow-400 hover:bg-yellow-500 text-gray-900 px-8 py-3 rounded-lg text-lg font-semibold disabled:opacity-50"
+                        x-text="loading ? 'Please wait...' : 'Join Waitlist'"
+                    ></button>
+                </form>
+                
+                <div x-show="message" x-text="message" class="mt-4 p-4 rounded-lg" :class="success ? 'bg-green-500' : 'bg-red-500'"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-white py-12">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="grid md:grid-cols-3 gap-8">
+                <div>
+                    <h3 class="text-xl font-bold mb-4">QuantGP</h3>
+                    <p class="text-gray-400">
+                        Advanced quantitative portfolio optimization using AI and modern financial theory.
+                    </p>
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-4">Technology</h4>
+                    <ul class="space-y-2 text-gray-400">
+                        <li>Gaussian Process Regression</li>
+                        <li>Utility Theory Optimization</li>
+                        <li>Probabilistic Modeling</li>
+                        <li>Risk Management</li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-4">Contact</h4>
+                    <p class="text-gray-400">
+                        Questions about our platform?<br>
+                        Get in touch for more information.
+                    </p>
+                </div>
+            </div>
+            <div class="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
+                <p>&copy; 2025 QuantGP. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        function signupForm() {
+            return {
+                form: {
+                    name: '',
+                    email: ''
+                },
+                loading: false,
+                message: '',
+                success: false,
+                
+                async submitForm() {
+                    this.loading = true;
+                    this.message = '';
+                    
+                    try {
+                        const response = await fetch('/signup', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify(this.form)
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (response.ok) {
+                            this.success = true;
+                            this.message = data.message;
+                            this.form.name = '';
+                            this.form.email = '';
+                        } else {
+                            this.success = false;
+                            this.message = data.message || 'An error occurred';
+                        }
+                    } catch (error) {
+                        this.success = false;
+                        this.message = 'Network error. Please try again.';
+                    } finally {
+                        this.loading = false;
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>
