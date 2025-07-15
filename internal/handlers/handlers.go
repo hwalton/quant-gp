@@ -81,3 +81,19 @@ func NotFoundHandler(w http.ResponseWriter, r *http.Request) {
 		</html>
 	`))
 }
+
+func SignupPageHandler(w http.ResponseWriter, r *http.Request) {
+	tmplPath := filepath.Join("web", "templates", "signup.html")
+	tmpl, err := template.ParseFiles(tmplPath)
+	if err != nil {
+		log.Printf("Error parsing signup template: %v", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	err = tmpl.Execute(w, nil)
+	if err != nil {
+		log.Printf("Error executing signup template: %v", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+	}
+}

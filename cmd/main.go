@@ -20,6 +20,7 @@ func main() {
 
 	// Routes
 	r.HandleFunc("/", handlers.HomeHandler).Methods("GET")
+	r.HandleFunc("/signup", handlers.SignupPageHandler).Methods("GET")
 	r.HandleFunc("/signup", handlers.SignupHandler).Methods("POST")
 	r.HandleFunc("/health", handlers.HealthHandler).Methods("GET")
 
