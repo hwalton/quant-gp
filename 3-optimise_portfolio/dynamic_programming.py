@@ -1,6 +1,17 @@
 import numpy as np
 from scipy.optimize import minimize_scalar
 
+def expected_future_value_vectorized(cash, btc_units, next_grid, wealth_grid, value_fn, t, next_pdf):
+    # Vectorized computation of next wealth and lookup of value function
+    next_wealth = cash + btc_units * np.exp(next_grid)
+    # Find closest wealth grid indices for all next_wealth
+    next_w_idx = np.abs(wealth_grid[:, None] - next_wealth).argmin(axis=0)
+    # Gather value function for all (next_w_idx, next_p_idx)
+    v = np.array([value_fn[(t+1, w_idx, p_idx)] for p_idx, w_idx in enumerate(next_w_idx)])
+    # Weighted sum for expectation
+    exp_val = np.sum(v * next_pdf)
+    return exp_val
+
 def dynamic_programming_policy(
     mu_seq, sigma_seq, utility_func, initial_wealth, current_log_price,
     n_steps=12, price_grid_size=101, wealth_grid_size=101, verbose=True
@@ -39,13 +50,9 @@ def dynamic_programming_policy(
                         np.exp(-0.5 * ((next_grid - next_mu)/next_sigma)**2)
                     )
                     next_pdf /= next_pdf.sum()
-                    exp_val = 0.0
-                    for next_p_idx, next_log_price in enumerate(next_grid):
-                        next_wealth = cash + btc_units * np.exp(next_log_price)
-                        next_w_idx = np.argmin(np.abs(wealth_grid - next_wealth))
-                        v = value_fn[(t+1, next_w_idx, next_p_idx)]
-                        prob = next_pdf[next_p_idx]
-                        exp_val += v * prob
+                    exp_val = expected_future_value_vectorized(
+                        cash, btc_units, next_grid, wealth_grid, value_fn, t, next_pdf
+                    )
                     return -exp_val  # Negative for minimization
 
                 # Use minimize_scalar instead of grid search
