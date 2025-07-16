@@ -17,12 +17,12 @@ class Config:
     ystd_pkl: str = '../2-gp_fit/y_std.npy'
     log_csv: str = '../0-data/btc_weekly_prices.csv'
     initial_wealth: float = 1000
-    utility_function: str = ['step', 'smooth_step', 'sigmoid', 'tanh', 'tanh_custom', 'identity', 'linear', 'log', 'sqrt', 'crra'][4]  # Use tanh_custom
+    utility_function: str = ['step', 'smooth_step', 'sigmoid', 'tanh', 'tanh_custom', 'identity', 'linear', 'log', 'sqrt', 'crra'][0]  # Use tanh_custom
     sigmoid_k: float = 25.0
     w0: float = 0.98
     predict_index_offset: int = 52
     y_limit: tuple = (4, 18)
-    step_threshold: float = 1001
+    step_threshold: float = 900
     step_steepness: float = 100.0  # Controls how sharp the transition is
     
     # Dynamic Programming Configuration
@@ -390,13 +390,7 @@ def plot_dp_wealth_distribution(mu_seq, sigma_seq, current_log_price, optimal_we
     plt.legend()
     plt.tight_layout()
     
-    # Add statistics text
-    prob_above_threshold = ""
-    if cfg.utility_function in ['step', 'smooth_step']:
-        prob_above = np.sum(pdf_vals[wealth_vals > cfg.step_threshold]) * d_log_price
-        prob_above_threshold = f"\nProb above threshold: {prob_above:.1%}"
-    
-    plt.text(0.02, 0.98, f'Expected Wealth: ${expected_wealth:.2f}\nDP Optimal BTC: {optimal_weight:.1%}{prob_above_threshold}', 
+    plt.text(0.02, 0.98, f'Expected Wealth: ${expected_wealth:.2f}\nDP Optimal BTC: {optimal_weight:.1%}', 
              transform=plt.gca().transAxes, verticalalignment='top', 
              bbox=dict(boxstyle='round', facecolor='lightgreen', alpha=0.8))
     
@@ -408,6 +402,9 @@ def main():
     X_pred, y_pred, y_std, y_actual = load_data(cfg)
 
     mu, sigma, current_log_price = compute_gp_stats(X_pred, y_pred, y_std, y_actual, cfg)
+
+    plot_utility_function(cfg)
+    print("Saved utility_func.png")
 
     # # Calculate the actual returns
     # expected_log_return = mu - current_log_price
@@ -433,9 +430,6 @@ def main():
 
     # plot_utility_distribution(mu, sigma, current_log_price, optimal_weight, cfg)
     # print("Saved utility_distribution.png")
-
-    # plot_utility_function(cfg)
-    # print("Saved utility_func.png")
 
     # --- Dynamic Programming Section ---
     print("\n--- Dynamic Programming ---")
