@@ -321,6 +321,78 @@ def plot_dp_utility_distribution(mu_seq, sigma_seq, current_log_price, optimal_w
     plt.savefig("dp_utility_distribution.png", dpi=150)
     print("Saved dp_utility_distribution.png")
 
+def plot_dp_wealth_distribution(mu_seq, sigma_seq, current_log_price, optimal_weight, cfg: Config):
+    """Plot the distribution of portfolio wealth using DP optimal allocation"""
+    
+    # Use 1-step ahead predictions
+    next_mu = mu_seq[1]
+    next_sigma = sigma_seq[1]
+    
+    # Create log price scenarios
+    pred_log_price_vals = np.linspace(next_mu - 5 * next_sigma, next_mu + 5 * next_sigma, 1000)
+    pdf_vals = norm.pdf(pred_log_price_vals, loc=next_mu, scale=next_sigma)
+    
+    # Calculate wealth using the DP optimal allocation
+    wealth_vals = []
+    for pred_log_price in pred_log_price_vals:
+        cash_portion = cfg.initial_wealth * (1 - optimal_weight)
+        btc_units = (cfg.initial_wealth * optimal_weight) / np.exp(current_log_price)
+        btc_value = btc_units * np.exp(pred_log_price)
+        portfolio_value = cash_portion + btc_value
+        wealth_vals.append(portfolio_value)
+    
+    wealth_vals = np.array(wealth_vals)
+    
+    # Calculate expected wealth by integrating over log-price space
+    d_log_price = pred_log_price_vals[1] - pred_log_price_vals[0]
+    expected_wealth = np.sum(wealth_vals * pdf_vals * d_log_price)
+    
+    plt.figure(figsize=(10, 6))
+    plt.plot(wealth_vals, pdf_vals, label='DP Wealth PDF', linewidth=2, color='green')
+    plt.axvline(cfg.initial_wealth, color='r', linestyle='--', label='Initial Wealth', linewidth=2)
+    plt.axvline(expected_wealth, color='orange', linestyle=':', 
+                label=f'Expected Wealth: ${expected_wealth:.0f}', linewidth=2)
+    
+    # Add threshold line if using step functions
+    if cfg.utility_function in ['step', 'smooth_step']:
+        plt.axvline(cfg.step_threshold, color='purple', linestyle='-.', 
+                    label=f'Utility Threshold: ${cfg.step_threshold}', linewidth=2)
+    
+    plt.xlabel('Simulated Future Wealth ($)')
+    plt.ylabel('Probability Density')
+    plt.title('DP Wealth Distribution (1 Step Ahead)')
+    
+    # Fixed scale: always 0 to 2x initial wealth
+    plt.xlim(0, 2 * cfg.initial_wealth)
+    
+    # Fix the x-axis formatting
+    ax = plt.gca()
+    ax.ticklabel_format(style='plain', axis='x')
+    
+    # Set clean tick spacing every $200
+    tick_spacing = 200
+    ax.set_xticks(np.arange(0, 2 * cfg.initial_wealth + tick_spacing, tick_spacing))
+    
+    # Format x-axis labels as integers
+    ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${int(x)}'))
+    
+    plt.grid(True, alpha=0.3)
+    plt.legend()
+    plt.tight_layout()
+    
+    # Add statistics text
+    prob_above_threshold = ""
+    if cfg.utility_function in ['step', 'smooth_step']:
+        prob_above = np.sum(pdf_vals[wealth_vals > cfg.step_threshold]) * d_log_price
+        prob_above_threshold = f"\nProb above threshold: {prob_above:.1%}"
+    
+    plt.text(0.02, 0.98, f'Expected Wealth: ${expected_wealth:.2f}\nDP Optimal BTC: {optimal_weight:.1%}{prob_above_threshold}', 
+             transform=plt.gca().transAxes, verticalalignment='top', 
+             bbox=dict(boxstyle='round', facecolor='lightgreen', alpha=0.8))
+    
+    plt.savefig("dp_wealth_distribution.png", dpi=150)
+    print("Saved dp_wealth_distribution.png")
+
 def main():
     cfg = Config()
     X_pred, y_pred, y_std, y_actual = load_data(cfg)
@@ -385,6 +457,9 @@ def main():
     
     # Plot DP utility distribution
     plot_dp_utility_distribution(mu_seq, sigma_seq, current_log_price, alloc0, cfg)
+    
+    # Plot DP wealth distribution  
+    plot_dp_wealth_distribution(mu_seq, sigma_seq, current_log_price, alloc0, cfg)
 
 if __name__ == '__main__':
     main()
