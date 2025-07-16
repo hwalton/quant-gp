@@ -17,13 +17,23 @@ class Config:
     ystd_pkl: str = '../2-gp_fit/y_std.npy'
     log_csv: str = '../0-data/btc_weekly_prices.csv'
     initial_wealth: float = 1000
-    utility_function: str = ['step', 'smooth_step', 'sigmoid', 'tanh', 'tanh_custom', 'identity', 'linear', 'log', 'sqrt', 'crra'][4]  # Use smooth_step
+    utility_function: str = ['step', 'smooth_step', 'sigmoid', 'tanh', 'tanh_custom', 'identity', 'linear', 'log', 'sqrt', 'crra'][4]  # Use tanh_custom
     sigmoid_k: float = 25.0
     w0: float = 0.98
     predict_index_offset: int = 52
     y_limit: tuple = (4, 18)
     step_threshold: float = 1001
     step_steepness: float = 100.0  # Controls how sharp the transition is
+    
+    # Dynamic Programming Configuration
+    dp_n_steps: int = 2  # Number of time steps for DP
+    dp_price_grid_size: int = 73  # Grid size for price discretization
+    dp_wealth_grid_size: int = 73  # Grid size for wealth discretization
+    dp_weeks_per_step: int = 4  # Weeks between time steps (4 = monthly)
+    dp_verbose: bool = False  # Print debug information
+    dp_compute_utility_curve: bool = True  # Compute utility curve for plotting
+    dp_n_alloc_points: int = 100  # Number of allocation points for utility curve
+    dp_moving_avg_window: int = 5  # Moving average window for utility curve smoothing
 
 def load_data(cfg: Config):
     X_pred = np.load(cfg.x_pred_pkl)
@@ -428,27 +438,34 @@ def main():
     # print("Saved utility_func.png")
 
     # --- Dynamic Programming Section ---
-    # 12 monthly steps, get mu and sigma for each
     print("\n--- Dynamic Programming ---")
-    n_steps = 2
-    price_grid_size = 73
-    wealth_grid_size = 73
+    print(f"Configuration:")
+    print(f"  Utility function: {cfg.utility_function}")
+    print(f"  Initial wealth: ${cfg.initial_wealth}")
+    print(f"  Time horizon: {cfg.dp_n_steps * cfg.dp_weeks_per_step // 4} months")
+    print(f"  Grid size: {cfg.dp_price_grid_size}x{cfg.dp_wealth_grid_size}")
+    
+    # Build mu and sigma sequences based on configuration
     current_idx = len(y_actual)
     mu_seq = []
     sigma_seq = []
-    for k in range(n_steps+1):
-        idx = np.searchsorted(X_pred.ravel(), current_idx + 4*k)  # 4 weeks per month
+    for k in range(cfg.dp_n_steps + 1):
+        idx = np.searchsorted(X_pred.ravel(), current_idx + cfg.dp_weeks_per_step * k)
         mu_seq.append(y_pred[idx])
         sigma_seq.append(y_std[idx])
+    
     utility_func = get_utility_func(cfg)
     initial_wealth = cfg.initial_wealth
     current_log_price = y_actual[-1]
 
-    # Updated call to get utility curve data with smoothing
+    # Dynamic Programming with configuration from Config
     policy, value_fn, alloc0, utility_curve_data = dynamic_programming_policy(
         mu_seq, sigma_seq, utility_func, initial_wealth, current_log_price,
-        n_steps, price_grid_size, wealth_grid_size, verbose=False,
-        compute_utility_curve=True, n_alloc_points=100, moving_avg=5  # Try window size of 5
+        cfg.dp_n_steps, cfg.dp_price_grid_size, cfg.dp_wealth_grid_size, 
+        verbose=cfg.dp_verbose,
+        compute_utility_curve=cfg.dp_compute_utility_curve, 
+        n_alloc_points=cfg.dp_n_alloc_points, 
+        moving_avg=cfg.dp_moving_avg_window
     )
     print(f"Optimal initial allocation: {alloc0:.3f}")
 
