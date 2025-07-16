@@ -2,13 +2,13 @@ import numpy as np
 from scipy.optimize import minimize_scalar
 
 def expected_future_value_vectorized(cash, btc_units, next_grid, wealth_grid, value_fn, t, next_pdf):
-    # Vectorized computation of next wealth and lookup of value function
     next_wealth = cash + btc_units * np.exp(next_grid)
-    # Find closest wealth grid indices for all next_wealth
-    next_w_idx = np.abs(wealth_grid[:, None] - next_wealth).argmin(axis=0)
-    # Gather value function for all (next_w_idx, next_p_idx)
-    v = np.array([value_fn[(t+1, w_idx, p_idx)] for p_idx, w_idx in enumerate(next_w_idx)])
-    # Weighted sum for expectation
+    # Use searchsorted for better index finding
+    next_w_idx = np.searchsorted(wealth_grid, next_wealth, side='left')
+    next_w_idx = np.clip(next_w_idx, 0, len(wealth_grid)-1)
+    
+    # Use proper array indexing
+    v = value_fn[t+1, next_w_idx, np.arange(len(next_grid))]
     exp_val = np.sum(v * next_pdf)
     return exp_val
 
@@ -76,9 +76,7 @@ def dynamic_programming_policy(
     p0_idx = np.clip(p0_idx, 0, len(price_grids[0])-1)
     
     # Use interpolation for initial allocation
-    optimal_initial_allocation = interpolate_policy(
-        policy, wealth_grid, price_grids[0], initial_wealth, current_log_price
-    )
+    optimal_initial_allocation = policy[0, w0_idx, p0_idx]
     
     # Compute utility curve if requested
     utility_curve_data = None
@@ -86,11 +84,21 @@ def dynamic_programming_policy(
         allocs = np.linspace(0, 1, n_alloc_points)
         utilities = []
         
+        # Find the exact grid indices used for the optimal allocation
+        w0_idx = np.searchsorted(wealth_grid, initial_wealth, side='left')
+        w0_idx = np.clip(w0_idx, 0, len(wealth_grid)-1)
+        p0_idx = np.searchsorted(price_grids[0], current_log_price, side='left') 
+        p0_idx = np.clip(p0_idx, 0, len(price_grids[0])-1)
+        
+        # Use the exact same grid point values as the optimization
+        grid_wealth = wealth_grid[w0_idx]
+        grid_log_price = price_grids[0][p0_idx]
+        
         for alloc in allocs:
-            # Use the same logic as in the DP backward induction
-            cash = initial_wealth * (1 - alloc)
-            btc_units = (initial_wealth * alloc) / np.exp(current_log_price)
-            next_mu = mu_seq[1]  # Next step prediction
+            # Use the grid values instead of the exact initial values
+            cash = grid_wealth * (1 - alloc)
+            btc_units = (grid_wealth * alloc) / np.exp(grid_log_price)
+            next_mu = mu_seq[1]
             next_sigma = sigma_seq[1]
             next_grid = price_grids[1]
             next_pdf = (
@@ -105,17 +113,27 @@ def dynamic_programming_policy(
             utilities.append(exp_val)
         
         utility_curve_data = (allocs, np.array(utilities))
+        
+        # Verify: find the allocation that gives maximum utility
+        max_idx = np.argmax(utilities)
+        max_alloc = allocs[max_idx]
+        
+        if verbose:
+            print(f"Debug: Max utility allocation from curve: {max_alloc:.4f}")
+            print(f"Debug: optimal allocation: {optimal_initial_allocation:.4f}")
+            print(f"Debug: Using grid wealth: {grid_wealth:.2f} vs actual: {initial_wealth:.2f}")
+            print(f"Debug: Using grid log_price: {grid_log_price:.6f} vs actual: {current_log_price:.6f}")
     
     if verbose:
-        print(f"[DP] Initial wealth: {initial_wealth:.2f}, closest grid idx: {w0_idx}")
-        print(f"[DP] Initial log_price: {current_log_price:.4f}, closest grid idx: {p0_idx}")
-        print(f"[DP] Interpolated optimal initial allocation: {optimal_initial_allocation:.4f}")
+        print(f"Initial wealth: {initial_wealth:.2f}, closest grid idx: {w0_idx}")
+        print(f"Initial log_price: {current_log_price:.4f}, closest grid idx: {p0_idx}")
+        # print(f"[DP] Interpolated optimal initial allocation: {optimal_initial_allocation:.4f}")
         print("Initial wealth:", initial_wealth)
-        print("Initial wealth idx:", w0_idx)
+        # print("Initial wealth idx:", w0_idx)
         print("Initial log price:", current_log_price)
-        print("Price grid:", price_grids[0])
+        # print("Price grid:", price_grids[0])
         print("Initial log price idx:", p0_idx)
-        print("Optimal allocation (grid):", policy[0, w0_idx, p0_idx])
+        print(f"Optimal allocation: {optimal_initial_allocation:.4f}")
     
     if compute_utility_curve:
         return policy, value_fn, optimal_initial_allocation, utility_curve_data

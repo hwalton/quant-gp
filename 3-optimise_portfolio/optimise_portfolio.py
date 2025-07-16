@@ -20,7 +20,7 @@ class Config:
     utility_function: str = ['step', 'smooth_step', 'sigmoid', 'tanh', 'tanh_custom', 'identity', 'linear', 'log', 'sqrt', 'crra'][4]  # Use smooth_step
     sigmoid_k: float = 25.0
     w0: float = 0.98
-    predict_index_offset: int = 10
+    predict_index_offset: int = 52
     y_limit: tuple = (4, 18)
     step_threshold: float = 1001
     step_steepness: float = 100.0  # Controls how sharp the transition is
@@ -300,8 +300,8 @@ def main():
     # --- Dynamic Programming Section ---
     # 12 monthly steps, get mu and sigma for each
     n_steps = 2
-    price_grid_size = 101
-    wealth_grid_size = 101
+    price_grid_size = 19
+    wealth_grid_size = 19
     current_idx = len(y_actual)
     mu_seq = []
     sigma_seq = []
