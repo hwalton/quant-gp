@@ -399,33 +399,33 @@ def main():
 
     mu, sigma, current_log_price = compute_gp_stats(X_pred, y_pred, y_std, y_actual, cfg)
 
-    # Calculate the actual returns
-    expected_log_return = mu - current_log_price
-    expected_percent_return = (np.exp(mu) / np.exp(current_log_price) - 1) * 100
+    # # Calculate the actual returns
+    # expected_log_return = mu - current_log_price
+    # expected_percent_return = (np.exp(mu) / np.exp(current_log_price) - 1) * 100
 
-    print(f"\nOriginal GP predictions:")
-    print(f"Current log price: {current_log_price:.6f}")
-    print(f"Predicted future log price: {mu:.6f}")
-    print(f"Expected log return: {expected_log_return:.6f}")
-    print(f"Expected % return: {expected_percent_return:.1f}%")
-    print(f"Predicted standard deviation: {sigma:.6f}")
-    print(f"Sharpe-like ratio: {expected_log_return/sigma:.3f}")
+    # print(f"\nOriginal GP predictions:")
+    # print(f"Current log price: {current_log_price:.6f}")
+    # print(f"Predicted future log price: {mu:.6f}")
+    # print(f"Expected log return: {expected_log_return:.6f}")
+    # print(f"Expected % return: {expected_percent_return:.1f}%")
+    # print(f"Predicted standard deviation: {sigma:.6f}")
+    # print(f"Sharpe-like ratio: {expected_log_return/sigma:.3f}")
 
-    optimal_weight = optimise_allocation(mu, sigma, current_log_price, cfg)
-    print(f"Optimal BTC allocation: {optimal_weight:.3f}")
-    print(f"Optimal cash allocation: {1 - optimal_weight:.3f}")
+    # optimal_weight = optimise_allocation(mu, sigma, current_log_price, cfg)
+    # print(f"Optimal BTC allocation: {optimal_weight:.3f}")
+    # print(f"Optimal cash allocation: {1 - optimal_weight:.3f}")
 
-    plot_expected_utility_curve(mu, sigma, current_log_price, optimal_weight, cfg)
-    print("Saved utility_curve.png")
+    # plot_expected_utility_curve(mu, sigma, current_log_price, optimal_weight, cfg)
+    # print("Saved utility_curve.png")
 
-    plot_wealth_distribution(mu, sigma, current_log_price, optimal_weight, cfg)
-    print("Saved wealth_distribution.png")
+    # plot_wealth_distribution(mu, sigma, current_log_price, optimal_weight, cfg)
+    # print("Saved wealth_distribution.png")
 
-    plot_utility_distribution(mu, sigma, current_log_price, optimal_weight, cfg)
-    print("Saved utility_distribution.png")
+    # plot_utility_distribution(mu, sigma, current_log_price, optimal_weight, cfg)
+    # print("Saved utility_distribution.png")
 
-    plot_utility_function(cfg)
-    print("Saved utility_func.png")
+    # plot_utility_function(cfg)
+    # print("Saved utility_func.png")
 
     # --- Dynamic Programming Section ---
     # 12 monthly steps, get mu and sigma for each
