@@ -263,6 +263,64 @@ def plot_dp_expected_utility_curve(utility_curve_data, alloc0):
     plt.savefig("dp_utility_curve.png")
     print("Saved dp_utility_curve.png")
 
+def plot_dp_utility_distribution(mu_seq, sigma_seq, current_log_price, optimal_weight, cfg: Config):
+    """Plot the distribution of portfolio utility using DP optimal allocation"""
+    
+    # Use 1-step ahead predictions
+    next_mu = mu_seq[1]
+    next_sigma = sigma_seq[1]
+    
+    # Create log price scenarios
+    pred_log_price_vals = np.linspace(next_mu - 5 * next_sigma, next_mu + 5 * next_sigma, 1000)
+    pdf_vals = norm.pdf(pred_log_price_vals, loc=next_mu, scale=next_sigma)
+    
+    utility = get_utility_func(cfg)
+    
+    # Calculate wealth and utility using the DP optimal allocation
+    wealth_vals = []
+    utility_vals = []
+    for pred_log_price in pred_log_price_vals:
+        cash_portion = cfg.initial_wealth * (1 - optimal_weight)
+        btc_units = (cfg.initial_wealth * optimal_weight) / np.exp(current_log_price)
+        btc_value = btc_units * np.exp(pred_log_price)
+        portfolio_value = cash_portion + btc_value
+        
+        wealth_vals.append(portfolio_value)
+        utility_vals.append(utility(portfolio_value))
+    
+    wealth_vals = np.array(wealth_vals)
+    utility_vals = np.array(utility_vals)
+    
+    # Calculate expected utility
+    d_log_price = pred_log_price_vals[1] - pred_log_price_vals[0]
+    expected_utility_val = np.sum(utility_vals * pdf_vals * d_log_price)
+    
+    # Initial wealth utility for reference
+    initial_utility = utility(cfg.initial_wealth)
+    
+    plt.figure(figsize=(10, 6))
+    plt.plot(utility_vals, pdf_vals, label='DP Utility PDF', linewidth=2, color='green')
+    plt.axvline(initial_utility, color='r', linestyle='--', 
+                label=f'Initial Utility: {initial_utility:.3f}', linewidth=2)
+    plt.axvline(expected_utility_val, color='orange', linestyle=':', 
+                label=f'Expected Utility: {expected_utility_val:.3f}', linewidth=2)
+    
+    plt.xlabel('Utility Value')
+    plt.ylabel('Probability Density')
+    plt.title('Distribution of DP Portfolio Utility (1 Step Ahead)')
+    
+    plt.grid(True, alpha=0.3)
+    plt.legend()
+    plt.tight_layout()
+    
+    # Add statistics text
+    plt.text(0.02, 0.98, f'Expected Utility: {expected_utility_val:.4f}\nDP Optimal BTC: {optimal_weight:.1%}', 
+             transform=plt.gca().transAxes, verticalalignment='top', 
+             bbox=dict(boxstyle='round', facecolor='lightgreen', alpha=0.8))
+    
+    plt.savefig("dp_utility_distribution.png", dpi=150)
+    print("Saved dp_utility_distribution.png")
+
 def main():
     cfg = Config()
     X_pred, y_pred, y_std, y_actual = load_data(cfg)
@@ -324,6 +382,9 @@ def main():
 
     # Use the utility curve data from DP
     plot_dp_expected_utility_curve(utility_curve_data, alloc0)
+    
+    # Plot DP utility distribution
+    plot_dp_utility_distribution(mu_seq, sigma_seq, current_log_price, alloc0, cfg)
 
 if __name__ == '__main__':
     main()
