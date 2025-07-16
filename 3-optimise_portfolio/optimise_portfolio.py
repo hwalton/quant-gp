@@ -34,7 +34,7 @@ class Config:
     # CRRA parameter (gamma) is hardcoded in get_utility_func
     
     # --- Dynamic Programming Configuration ---
-    dp_n_steps: int = 2  # Number of time steps for DP
+    dp_invest_horizon_steps: int = 2  # Number of time steps for DP
     dp_price_grid_size: int = 73  # Grid size for price discretization
     dp_wealth_grid_size: int = 73  # Grid size for wealth discretization
     dp_weeks_per_step: int = 4  # Weeks between time steps (4 = monthly)
@@ -444,14 +444,14 @@ def main():
     print(f"Configuration:")
     print(f"  Utility function: {cfg.utility_function}")
     print(f"  Initial wealth: ${cfg.initial_wealth}")
-    print(f"  Time horizon: {cfg.dp_n_steps * cfg.dp_weeks_per_step // 4} months")
+    print(f"  Time horizon: {cfg.dp_invest_horizon_steps * cfg.dp_weeks_per_step // 4} months")
     print(f"  Grid size: {cfg.dp_price_grid_size}x{cfg.dp_wealth_grid_size}")
     
     # Build mu and sigma sequences based on configuration
     current_idx = len(y_actual)
     mu_seq = []
     sigma_seq = []
-    for k in range(cfg.dp_n_steps + 1):
+    for k in range(cfg.dp_invest_horizon_steps + 1):
         idx = np.searchsorted(X_pred.ravel(), current_idx + cfg.dp_weeks_per_step * k)
         mu_seq.append(y_pred[idx])
         sigma_seq.append(y_std[idx])
@@ -463,7 +463,7 @@ def main():
     # Dynamic Programming with configuration from Config
     policy, value_fn, alloc0, utility_curve_data = dynamic_programming_policy(
         mu_seq, sigma_seq, utility_func, initial_wealth, current_log_price,
-        cfg.dp_n_steps, cfg.dp_price_grid_size, cfg.dp_wealth_grid_size, 
+        cfg.dp_invest_horizon_steps, cfg.dp_price_grid_size, cfg.dp_wealth_grid_size, 
         verbose=cfg.dp_verbose,
         compute_utility_curve=cfg.dp_compute_utility_curve, 
         n_alloc_points=cfg.dp_n_alloc_points, 
