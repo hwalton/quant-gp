@@ -26,7 +26,7 @@ class Config:
     # --- Utility Function Configuration ---
     utility_function: str = ['step', 'smooth_step', 'sigmoid', 'tanh', 'tanh_custom', 'identity', 'linear', 'log', 'sqrt', 'crra'][0]  # step
     # Step function parameters
-    step_threshold: float = 900
+    step_threshold: float = 1100
     step_steepness: float = 100.0  # Controls how sharp the transition is (for smooth_step)
     # Sigmoid parameters
     sigmoid_k: float = 25.0
@@ -34,14 +34,14 @@ class Config:
     # CRRA parameter (gamma) is hardcoded in get_utility_func
     
     # --- Dynamic Programming Configuration ---
-    dp_invest_horizon_steps: int = 2  # Number of time steps for DP
+    dp_invest_horizon_steps: int = 6 # Number of time steps for DP
     dp_price_grid_size: int = 73  # Grid size for price discretization
     dp_wealth_grid_size: int = 73  # Grid size for wealth discretization
     dp_weeks_per_step: int = 4  # Weeks between time steps (4 = monthly)
     dp_verbose: bool = False  # Print debug information
     dp_compute_utility_curve: bool = True  # Compute utility curve for plotting
     dp_n_alloc_points: int = 100  # Number of allocation points for utility curve
-    dp_moving_avg_window: int = 5  # Moving average window for utility curve smoothing
+    dp_moving_avg_window: int = 1  # Moving average window for utility curve smoothing
 
 def load_data(cfg: Config):
     X_pred = np.load(cfg.x_pred_pkl)
@@ -371,11 +371,6 @@ def plot_dp_wealth_distribution(mu_seq, sigma_seq, current_log_price, optimal_we
     plt.axvline(expected_wealth, color='orange', linestyle=':', 
                 label=f'Expected Wealth: ${expected_wealth:.0f}', linewidth=2)
     
-    # Add threshold line if using step functions
-    if cfg.utility_function in ['step', 'smooth_step']:
-        plt.axvline(cfg.step_threshold, color='purple', linestyle='-.', 
-                    label=f'Utility Threshold: ${cfg.step_threshold}', linewidth=2)
-    
     plt.xlabel('Simulated Future Wealth ($)')
     plt.ylabel('Probability Density')
     plt.title('DP Wealth Distribution (1 Step Ahead)')
@@ -404,6 +399,138 @@ def plot_dp_wealth_distribution(mu_seq, sigma_seq, current_log_price, optimal_we
     
     plt.savefig("dp_wealth_distribution.png", dpi=150)
     print("Saved dp_wealth_distribution.png")
+
+def plot_dp_utility_distribution_full_horizon(mu_seq, sigma_seq, current_log_price, optimal_weight, cfg: Config):
+    """Plot the distribution of portfolio utility using DP optimal allocation over full horizon"""
+    
+    # Use final time step predictions (full horizon)
+    final_mu = mu_seq[-1]
+    final_sigma = sigma_seq[-1]
+    
+    # Create log price scenarios
+    pred_log_price_vals = np.linspace(final_mu - 5 * final_sigma, final_mu + 5 * final_sigma, 1000)
+    pdf_vals = norm.pdf(pred_log_price_vals, loc=final_mu, scale=final_sigma)
+    
+    utility = get_utility_func(cfg)
+    
+    # Calculate wealth and utility using the DP optimal allocation
+    wealth_vals = []
+    utility_vals = []
+    for pred_log_price in pred_log_price_vals:
+        cash_portion = cfg.initial_wealth * (1 - optimal_weight)
+        btc_units = (cfg.initial_wealth * optimal_weight) / np.exp(current_log_price)
+        btc_value = btc_units * np.exp(pred_log_price)
+        portfolio_value = cash_portion + btc_value
+        
+        wealth_vals.append(portfolio_value)
+        utility_vals.append(utility(portfolio_value))
+    
+    wealth_vals = np.array(wealth_vals)
+    utility_vals = np.array(utility_vals)
+    
+    # Calculate expected utility
+    d_log_price = pred_log_price_vals[1] - pred_log_price_vals[0]
+    expected_utility_val = np.sum(utility_vals * pdf_vals * d_log_price)
+    
+    # Initial wealth utility for reference
+    initial_utility = utility(cfg.initial_wealth)
+    
+    plt.figure(figsize=(10, 6))
+    plt.plot(utility_vals, pdf_vals, label='DP Utility PDF (Full Horizon)', linewidth=2, color='green')
+    plt.axvline(initial_utility, color='r', linestyle='--', 
+                label=f'Initial Utility: {initial_utility:.3f}', linewidth=2)
+    plt.axvline(expected_utility_val, color='orange', linestyle=':', 
+                label=f'Expected Utility: {expected_utility_val:.3f}', linewidth=2)
+    
+    plt.xlabel('Utility Value')
+    plt.ylabel('Probability Density')
+    horizon_months = cfg.dp_invest_horizon_steps * cfg.dp_weeks_per_step // 4
+    plt.title(f'Distribution of DP Portfolio Utility (Full {horizon_months}-Month Horizon)')
+    
+    plt.grid(True, alpha=0.3)
+    plt.legend()
+    plt.tight_layout()
+    
+    # Add statistics text
+    plt.text(0.02, 0.98, f'Expected Utility: {expected_utility_val:.4f}\nDP Optimal BTC: {optimal_weight:.1%}\nHorizon: {horizon_months} months', 
+             transform=plt.gca().transAxes, verticalalignment='top', 
+             bbox=dict(boxstyle='round', facecolor='lightgreen', alpha=0.8))
+    
+    plt.savefig("dp_utility_dist_full_horz.png", dpi=150)
+    print("Saved dp_utility_dist_full_horz.png")
+
+def plot_dp_wealth_distribution_full_horizon(mu_seq, sigma_seq, current_log_price, optimal_weight, cfg: Config):
+    """Plot the distribution of portfolio wealth using DP optimal allocation over full horizon"""
+    
+    # Use final time step predictions (full horizon)
+    final_mu = mu_seq[-1]
+    final_sigma = sigma_seq[-1]
+    
+    # Create log price scenarios
+    pred_log_price_vals = np.linspace(final_mu - 5 * final_sigma, final_mu + 5 * final_sigma, 1000)
+    pdf_vals = norm.pdf(pred_log_price_vals, loc=final_mu, scale=final_sigma)
+    
+    # Calculate wealth using the DP optimal allocation
+    wealth_vals = []
+    for pred_log_price in pred_log_price_vals:
+        cash_portion = cfg.initial_wealth * (1 - optimal_weight)
+        btc_units = (cfg.initial_wealth * optimal_weight) / np.exp(current_log_price)
+        btc_value = btc_units * np.exp(pred_log_price)
+        portfolio_value = cash_portion + btc_value
+        wealth_vals.append(portfolio_value)
+    
+    wealth_vals = np.array(wealth_vals)
+    
+    # Calculate expected wealth by integrating over log-price space
+    d_log_price = pred_log_price_vals[1] - pred_log_price_vals[0]
+    expected_wealth = np.sum(wealth_vals * pdf_vals * d_log_price)
+    
+    plt.figure(figsize=(10, 6))
+    plt.plot(wealth_vals, pdf_vals, label='DP Wealth PDF (Full Horizon)', linewidth=2, color='green')
+    plt.axvline(cfg.initial_wealth, color='r', linestyle='--', label='Initial Wealth', linewidth=2)
+    plt.axvline(expected_wealth, color='orange', linestyle=':', 
+                label=f'Expected Wealth: ${expected_wealth:.0f}', linewidth=2)
+    
+    plt.xlabel('Simulated Future Wealth ($)')
+    plt.ylabel('Probability Density')
+    horizon_months = cfg.dp_invest_horizon_steps * cfg.dp_weeks_per_step // 4
+    plt.title(f'DP Wealth Distribution (Full {horizon_months}-Month Horizon)')
+    
+    # Adaptive scale: show reasonable range based on wealth distribution
+    wealth_min = np.min(wealth_vals)
+    wealth_max = np.max(wealth_vals)
+    plt.xlim(max(0, wealth_min * 0.8), wealth_max * 1.2)
+    
+    # Fix the x-axis formatting
+    ax = plt.gca()
+    ax.ticklabel_format(style='plain', axis='x')
+    
+    # Set clean tick spacing
+    wealth_range = wealth_max - max(0, wealth_min * 0.8)
+    tick_spacing = max(200, int(wealth_range / 10 / 100) * 100)  # Round to nearest 100
+    tick_start = int(max(0, wealth_min * 0.8) / tick_spacing) * tick_spacing
+    tick_end = int(wealth_max * 1.2 / tick_spacing + 1) * tick_spacing
+    ax.set_xticks(np.arange(tick_start, tick_end + tick_spacing, tick_spacing))
+    
+    # Format x-axis labels as integers
+    ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${int(x)}'))
+    
+    plt.grid(True, alpha=0.3)
+    plt.legend()
+    plt.tight_layout()
+    
+    # Add probability above threshold for step functions
+    prob_above_threshold = ""
+    if cfg.utility_function in ['step', 'smooth_step']:
+        prob_above = np.sum(pdf_vals[wealth_vals > cfg.step_threshold]) * d_log_price
+        prob_above_threshold = f"\nProb above threshold: {prob_above:.1%}"
+    
+    plt.text(0.02, 0.98, f'Expected Wealth: ${expected_wealth:.2f}\nDP Optimal BTC: {optimal_weight:.1%}\nHorizon: {horizon_months} months{prob_above_threshold}', 
+             transform=plt.gca().transAxes, verticalalignment='top', 
+             bbox=dict(boxstyle='round', facecolor='lightgreen', alpha=0.8))
+    
+    plt.savefig("dp_wealth_dist_full_horz.png", dpi=150)
+    print("Saved dp_wealth_dist_full_horz.png")
 
 def main():
     cfg = Config()
@@ -474,11 +601,17 @@ def main():
     # Use the utility curve data from DP
     plot_dp_expected_utility_curve(utility_curve_data, alloc0)
     
-    # Plot DP utility distribution
+    # Plot DP utility distribution (1 step)
     plot_dp_utility_distribution(mu_seq, sigma_seq, current_log_price, alloc0, cfg)
     
-    # Plot DP wealth distribution  
+    # Plot DP wealth distribution (1 step)
     plot_dp_wealth_distribution(mu_seq, sigma_seq, current_log_price, alloc0, cfg)
+    
+    # # Plot DP utility distribution (full horizon)
+    # plot_dp_utility_distribution_full_horizon(mu_seq, sigma_seq, current_log_price, alloc0, cfg)
+    
+    # # Plot DP wealth distribution (full horizon)
+    # plot_dp_wealth_distribution_full_horizon(mu_seq, sigma_seq, current_log_price, alloc0, cfg)
 
 if __name__ == '__main__':
     main()
