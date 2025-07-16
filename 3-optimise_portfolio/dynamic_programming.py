@@ -114,15 +114,17 @@ def dynamic_programming_policy(
         
         utility_curve_data = (allocs, np.array(utilities))
         
-        # Verify: find the allocation that gives maximum utility
+        # Use the allocation that gives maximum utility from the curve
         max_idx = np.argmax(utilities)
         max_alloc = allocs[max_idx]
         
+        # Override the grid-based optimal allocation with the curve maximum
+        optimal_initial_allocation = max_alloc
+        
         if verbose:
             print(f"Debug: Max utility allocation from curve: {max_alloc:.4f}")
-            print(f"Debug: optimal allocation: {optimal_initial_allocation:.4f}")
-            print(f"Debug: Using grid wealth: {grid_wealth:.2f} vs actual: {initial_wealth:.2f}")
-            print(f"Debug: Using grid log_price: {grid_log_price:.6f} vs actual: {current_log_price:.6f}")
+            print(f"Debug: Grid-based optimal allocation: {policy[0, w0_idx, p0_idx]:.4f}")
+            print(f"Debug: Using curve maximum as optimal allocation")
     
     if verbose:
         print(f"Initial wealth: {initial_wealth:.2f}, closest grid idx: {w0_idx}")
