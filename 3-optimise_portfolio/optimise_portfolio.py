@@ -248,6 +248,21 @@ def plot_utility_distribution(mu, sigma, current_log_price, optimal_weight, cfg:
     
     plt.savefig("utility_distribution.png", dpi=150)
 
+def plot_dp_expected_utility_curve(utility_curve_data, alloc0):
+    allocs, utilities = utility_curve_data
+    
+    plt.figure(figsize=(8, 4))
+    plt.plot(allocs, utilities, label='DP Expected Utility')
+    plt.axvline(alloc0, color='r', linestyle='--', label=f'Optimal allocation: {alloc0:.2f}')
+    plt.xlabel('BTC Allocation')
+    plt.ylabel('Expected Utility')
+    plt.title('DP Expected Utility vs BTC Allocation')
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    plt.savefig("dp_utility_curve.png")
+    print("Saved dp_utility_curve.png")
+
 def main():
     cfg = Config()
     X_pred, y_pred, y_std, y_actual = load_data(cfg)
@@ -285,6 +300,8 @@ def main():
     # --- Dynamic Programming Section ---
     # 12 monthly steps, get mu and sigma for each
     n_steps = 2
+    price_grid_size = 101
+    wealth_grid_size = 101
     current_idx = len(y_actual)
     mu_seq = []
     sigma_seq = []
@@ -296,11 +313,16 @@ def main():
     initial_wealth = cfg.initial_wealth
     current_log_price = y_actual[-1]
 
-    policy, value_fn, alloc0 = dynamic_programming_policy(
+    # Updated call to get utility curve data
+    policy, value_fn, alloc0, utility_curve_data = dynamic_programming_policy(
         mu_seq, sigma_seq, utility_func, initial_wealth, current_log_price,
-        n_steps, price_grid_size=101, wealth_grid_size=101, verbose=True
+        n_steps, price_grid_size, wealth_grid_size, verbose=True,
+        compute_utility_curve=True, n_alloc_points=100
     )
     print("Optimal initial allocation:", alloc0)
+
+    # Use the utility curve data from DP
+    plot_dp_expected_utility_curve(utility_curve_data, alloc0)
 
 if __name__ == '__main__':
     main()

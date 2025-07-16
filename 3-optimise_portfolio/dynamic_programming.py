@@ -14,11 +14,15 @@ def expected_future_value_vectorized(cash, btc_units, next_grid, wealth_grid, va
 
 def dynamic_programming_policy(
     mu_seq, sigma_seq, utility_func, initial_wealth, current_log_price,
-    n_steps=12, price_grid_size=101, wealth_grid_size=101, verbose=True
+    n_steps=12, price_grid_size=101, wealth_grid_size=101, verbose=True,
+    compute_utility_curve=False, n_alloc_points=100
 ):
     """
     Dynamic programming for optimal BTC allocation over a 1-year horizon (monthly rebalancing),
     using minimize_scalar for allocation optimization.
+    
+    If compute_utility_curve=True, also returns expected utilities for different allocations
+    at the initial state for plotting purposes.
     """
     price_grids = []
     for k in range(n_steps):
@@ -27,12 +31,14 @@ def dynamic_programming_policy(
     min_wealth = initial_wealth * 0.2
     max_wealth = initial_wealth * 5.0
     wealth_grid = np.linspace(min_wealth, max_wealth, wealth_grid_size)
-    value_fn = {}
-    policy = {}
+    value_fn = np.zeros((n_steps, wealth_grid_size, price_grid_size))
+    policy = np.zeros((n_steps, wealth_grid_size, price_grid_size))
+    
     # Terminal step: utility of final wealth for all (wealth, log_price)
     for w_idx, wealth in enumerate(wealth_grid):
         for p_idx, log_price in enumerate(price_grids[-1]):
-            value_fn[(n_steps-1, w_idx, p_idx)] = utility_func(wealth)
+            value_fn[n_steps-1, w_idx, p_idx] = utility_func(wealth)
+    
     # Backward induction
     for t in reversed(range(n_steps-1)):
         if verbose:
@@ -60,31 +66,61 @@ def dynamic_programming_policy(
                 best_p = res.x
                 best_val = -res.fun
 
-                value_fn[(t, w_idx, p_idx)] = best_val
-                policy[(t, w_idx, p_idx)] = best_p
-                if verbose and w_idx % (wealth_grid_size // 5) == 0 and p_idx % (price_grid_size // 5) == 0:
-                    print(f"  [DP] t={t}, wealth_idx={w_idx}, log_price_idx={p_idx}, best_p={best_p:.2f}, best_val={best_val:.4f}")
+                value_fn[t, w_idx, p_idx] = best_val
+                policy[t, w_idx, p_idx] = best_p
+    
     # Find closest grid points to current state
     w0_idx = np.searchsorted(wealth_grid, initial_wealth, side='left')
     w0_idx = np.clip(w0_idx, 0, len(wealth_grid)-1)
     p0_idx = np.searchsorted(price_grids[0], current_log_price, side='left')
     p0_idx = np.clip(p0_idx, 0, len(price_grids[0])-1)
+    
     # Use interpolation for initial allocation
     optimal_initial_allocation = interpolate_policy(
         policy, wealth_grid, price_grids[0], initial_wealth, current_log_price
     )
+    
+    # Compute utility curve if requested
+    utility_curve_data = None
+    if compute_utility_curve:
+        allocs = np.linspace(0, 1, n_alloc_points)
+        utilities = []
+        
+        for alloc in allocs:
+            # Use the same logic as in the DP backward induction
+            cash = initial_wealth * (1 - alloc)
+            btc_units = (initial_wealth * alloc) / np.exp(current_log_price)
+            next_mu = mu_seq[1]  # Next step prediction
+            next_sigma = sigma_seq[1]
+            next_grid = price_grids[1]
+            next_pdf = (
+                1/(next_sigma * np.sqrt(2*np.pi)) *
+                np.exp(-0.5 * ((next_grid - next_mu)/next_sigma)**2)
+            )
+            next_pdf /= next_pdf.sum()
+            
+            exp_val = expected_future_value_vectorized(
+                cash, btc_units, next_grid, wealth_grid, value_fn, 0, next_pdf
+            )
+            utilities.append(exp_val)
+        
+        utility_curve_data = (allocs, np.array(utilities))
+    
     if verbose:
         print(f"[DP] Initial wealth: {initial_wealth:.2f}, closest grid idx: {w0_idx}")
         print(f"[DP] Initial log_price: {current_log_price:.4f}, closest grid idx: {p0_idx}")
         print(f"[DP] Interpolated optimal initial allocation: {optimal_initial_allocation:.4f}")
         print("Initial wealth:", initial_wealth)
-        print("Wealth grid:", wealth_grid)
         print("Initial wealth idx:", w0_idx)
         print("Initial log price:", current_log_price)
         print("Price grid:", price_grids[0])
         print("Initial log price idx:", p0_idx)
         print("Optimal allocation (grid):", policy[0, w0_idx, p0_idx])
-    return policy, value_fn, optimal_initial_allocation
+    
+    if compute_utility_curve:
+        return policy, value_fn, optimal_initial_allocation, utility_curve_data
+    else:
+        return policy, value_fn, optimal_initial_allocation
 
 def interpolate_policy(policy, wealth_grid, price_grid, initial_wealth, initial_log_price):
     # Find indices below and above initial wealth
