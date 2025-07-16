@@ -24,7 +24,7 @@ class Config:
     # y_limit: tuple = (4, 18) #TODO: Delete
     
     # --- Utility Function Configuration ---
-    utility_function: str = ['step', 'smooth_step', 'sigmoid', 'tanh', 'tanh_custom', 'identity', 'linear', 'log', 'sqrt', 'crra'][0]  # step
+    utility_function: str = ['step', 'smooth_step', 'sigmoid', 'tanh', 'tanh_custom', 'identity', 'linear', 'log', 'sqrt', 'crra'][7]  # log utility for 1D DP
     # Step function parameters
     step_threshold: float = 1100
     step_steepness: float = 100.0  # Controls how sharp the transition is (for smooth_step)
@@ -38,7 +38,7 @@ class Config:
     dp_price_grid_size: int = 73  # Grid size for price discretization
     dp_wealth_grid_size: int = 73  # Grid size for wealth discretization
     dp_weeks_per_step: int = 4  # Weeks between time steps (4 = monthly)
-    dp_verbose: bool = False  # Print debug information
+    dp_verbose: bool = True  # Print debug information
     dp_compute_utility_curve: bool = True  # Compute utility curve for plotting
     dp_n_alloc_points: int = 100  # Number of allocation points for utility curve
     dp_moving_avg_window: int = 1  # Moving average window for utility curve smoothing
@@ -588,7 +588,7 @@ def main():
     current_log_price = y_actual[-1]
 
     # Dynamic Programming with configuration from Config
-    policy, value_fn, alloc0, utility_curve_data = dynamic_programming_policy(
+    policy, value_fn, alloc0, utility_curve_data, wealth_grid, price_grids = dynamic_programming_policy(
         mu_seq, sigma_seq, utility_func, initial_wealth, current_log_price,
         cfg.dp_invest_horizon_steps, cfg.dp_price_grid_size, cfg.dp_wealth_grid_size, 
         verbose=cfg.dp_verbose,
@@ -607,11 +607,11 @@ def main():
     # Plot DP wealth distribution (1 step)
     plot_dp_wealth_distribution(mu_seq, sigma_seq, current_log_price, alloc0, cfg)
     
-    # # Plot DP utility distribution (full horizon)
-    # plot_dp_utility_distribution_full_horizon(mu_seq, sigma_seq, current_log_price, alloc0, cfg)
+    # Plot DP utility distribution (full horizon)
+    plot_dp_utility_distribution_full_horizon(mu_seq, sigma_seq, current_log_price, alloc0, cfg)
     
-    # # Plot DP wealth distribution (full horizon)
-    # plot_dp_wealth_distribution_full_horizon(mu_seq, sigma_seq, current_log_price, alloc0, cfg)
+    # Plot DP wealth distribution (full horizon)
+    plot_dp_wealth_distribution_full_horizon(mu_seq, sigma_seq, current_log_price, alloc0, cfg)
 
 if __name__ == '__main__':
     main()
