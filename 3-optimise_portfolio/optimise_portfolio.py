@@ -284,7 +284,7 @@ def main():
 
     # --- Dynamic Programming Section ---
     # 12 monthly steps, get mu and sigma for each
-    n_steps = 12
+    n_steps = 2
     current_idx = len(y_actual)
     mu_seq = []
     sigma_seq = []
@@ -296,12 +296,11 @@ def main():
     initial_wealth = cfg.initial_wealth
     current_log_price = y_actual[-1]
 
-    policy_table, value_fn, alloc0 = dynamic_programming_policy(
+    policy, value_fn, alloc0 = dynamic_programming_policy(
         mu_seq, sigma_seq, utility_func, initial_wealth, current_log_price,
-        n_steps=n_steps, price_grid_size=101, alloc_grid_size=21
+        n_steps, price_grid_size=101, wealth_grid_size=101, verbose=True
     )
-    print(f"\n[DP] Optimal initial allocation: {alloc0:.2f}")
-    # Optionally: print or save the policy_table
+    print("Optimal initial allocation:", alloc0)
 
 if __name__ == '__main__':
     main()
