@@ -8,6 +8,7 @@ from scipy.optimize import minimize_scalar
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+from dynamic_programming import dynamic_programming_policy
 
 @dataclass(frozen=True)
 class Config:
@@ -280,6 +281,27 @@ def main():
 
     plot_utility_function(cfg)
     print("Saved utility_func.png")
+
+    # --- Dynamic Programming Section ---
+    # 12 monthly steps, get mu and sigma for each
+    n_steps = 12
+    current_idx = len(y_actual)
+    mu_seq = []
+    sigma_seq = []
+    for k in range(n_steps+1):
+        idx = np.searchsorted(X_pred.ravel(), current_idx + 4*k)  # 4 weeks per month
+        mu_seq.append(y_pred[idx])
+        sigma_seq.append(y_std[idx])
+    utility_func = get_utility_func(cfg)
+    initial_wealth = cfg.initial_wealth
+    current_log_price = y_actual[-1]
+
+    policy_table, value_fn, alloc0 = dynamic_programming_policy(
+        mu_seq, sigma_seq, utility_func, initial_wealth, current_log_price,
+        n_steps=n_steps, price_grid_size=101, alloc_grid_size=21
+    )
+    print(f"\n[DP] Optimal initial allocation: {alloc0:.2f}")
+    # Optionally: print or save the policy_table
 
 if __name__ == '__main__':
     main()

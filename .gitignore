@@ -2,3 +2,4 @@ venv
 *.png
 *.pkl
 *.npy
+__pycache__
