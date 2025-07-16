@@ -12,20 +12,28 @@ from dynamic_programming import dynamic_programming_policy
 
 @dataclass(frozen=True)
 class Config:
+    # --- Data and File Paths ---
     x_pred_pkl: str = '../2-gp_fit/X_pred.npy'
     y_pred_pkl: str = '../2-gp_fit/y_pred.npy'
     ystd_pkl: str = '../2-gp_fit/y_std.npy'
     log_csv: str = '../0-data/btc_weekly_prices.csv'
+    
+    # --- Portfolio and Prediction Settings ---
     initial_wealth: float = 1000
-    utility_function: str = ['step', 'smooth_step', 'sigmoid', 'tanh', 'tanh_custom', 'identity', 'linear', 'log', 'sqrt', 'crra'][0]  # Use tanh_custom
+    predict_index_offset: int = 52
+    # y_limit: tuple = (4, 18) #TODO: Delete
+    
+    # --- Utility Function Configuration ---
+    utility_function: str = ['step', 'smooth_step', 'sigmoid', 'tanh', 'tanh_custom', 'identity', 'linear', 'log', 'sqrt', 'crra'][0]  # step
+    # Step function parameters
+    step_threshold: float = 900
+    step_steepness: float = 100.0  # Controls how sharp the transition is (for smooth_step)
+    # Sigmoid parameters
     sigmoid_k: float = 25.0
     w0: float = 0.98
-    predict_index_offset: int = 52
-    y_limit: tuple = (4, 18)
-    step_threshold: float = 900
-    step_steepness: float = 100.0  # Controls how sharp the transition is
+    # CRRA parameter (gamma) is hardcoded in get_utility_func
     
-    # Dynamic Programming Configuration
+    # --- Dynamic Programming Configuration ---
     dp_n_steps: int = 2  # Number of time steps for DP
     dp_price_grid_size: int = 73  # Grid size for price discretization
     dp_wealth_grid_size: int = 73  # Grid size for wealth discretization
