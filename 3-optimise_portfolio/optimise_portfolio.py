@@ -299,6 +299,7 @@ def main():
 
     # --- Dynamic Programming Section ---
     # 12 monthly steps, get mu and sigma for each
+    print("\n--- Dynamic Programming ---")
     n_steps = 2
     price_grid_size = 73
     wealth_grid_size = 73
@@ -313,13 +314,13 @@ def main():
     initial_wealth = cfg.initial_wealth
     current_log_price = y_actual[-1]
 
-    # Updated call to get utility curve data
+    # Updated call to get utility curve data with smoothing
     policy, value_fn, alloc0, utility_curve_data = dynamic_programming_policy(
         mu_seq, sigma_seq, utility_func, initial_wealth, current_log_price,
-        n_steps, price_grid_size, wealth_grid_size, verbose=True,
-        compute_utility_curve=True, n_alloc_points=100
+        n_steps, price_grid_size, wealth_grid_size, verbose=False,
+        compute_utility_curve=True, n_alloc_points=100, moving_avg=5  # Try window size of 5
     )
-    print("Optimal initial allocation:", alloc0)
+    print(f"Optimal initial allocation: {alloc0:.3f}")
 
     # Use the utility curve data from DP
     plot_dp_expected_utility_curve(utility_curve_data, alloc0)

@@ -15,7 +15,7 @@ def expected_future_value_vectorized(cash, btc_units, next_grid, wealth_grid, va
 def dynamic_programming_policy(
     mu_seq, sigma_seq, utility_func, initial_wealth, current_log_price,
     n_steps=12, price_grid_size=101, wealth_grid_size=101, verbose=True,
-    compute_utility_curve=False, n_alloc_points=100
+    compute_utility_curve=False, n_alloc_points=100, moving_avg=1
 ):
     """
     Dynamic programming for optimal BTC allocation over a 1-year horizon (monthly rebalancing),
@@ -23,6 +23,9 @@ def dynamic_programming_policy(
     
     If compute_utility_curve=True, also returns expected utilities for different allocations
     at the initial state for plotting purposes.
+    
+    Args:
+        moving_avg: Window size for moving average smoothing of utility curve (default=1, no smoothing)
     """
     price_grids = []
     for k in range(n_steps):
@@ -41,8 +44,6 @@ def dynamic_programming_policy(
     
     # Backward induction
     for t in reversed(range(n_steps-1)):
-        if verbose:
-            print(f"[DP] Time step {t}")
         for w_idx, wealth in enumerate(wealth_grid):
             for p_idx, log_price in enumerate(price_grids[t]):
                 def neg_exp_val(p):
@@ -112,19 +113,54 @@ def dynamic_programming_policy(
             )
             utilities.append(exp_val)
         
-        utility_curve_data = (allocs, np.array(utilities))
+        utilities = np.array(utilities)
         
-        # Use the allocation that gives maximum utility from the curve
-        max_idx = np.argmax(utilities)
-        max_alloc = allocs[max_idx]
+        # Apply moving average smoothing if requested
+        if moving_avg > 1:
+            # Proper moving average that handles edges correctly
+            smoothed_utilities = np.full_like(utilities, np.nan)
+            half_window = moving_avg // 2
+            
+            for i in range(len(utilities)):
+                # Define the window bounds
+                start_idx = max(0, i - half_window)
+                end_idx = min(len(utilities), i + half_window + 1)
+                
+                # Only use actual values (no padding with zeros)
+                window_values = utilities[start_idx:end_idx]
+                smoothed_utilities[i] = np.mean(window_values)
+            
+            if verbose:
+                print(f"Applied moving average smoothing with window size {moving_avg}")
+        else:
+            smoothed_utilities = utilities
         
-        # Override the grid-based optimal allocation with the curve maximum
+        utility_curve_data = (allocs, smoothed_utilities)
+        
+        # Use the allocation that gives maximum utility from the smoothed curve
+        # Ignore NaN values when finding maximum
+        valid_mask = ~np.isnan(smoothed_utilities)
+        if np.any(valid_mask):
+            valid_utilities = smoothed_utilities[valid_mask]
+            valid_allocs = allocs[valid_mask]
+            max_idx_valid = np.argmax(valid_utilities)
+            max_alloc = valid_allocs[max_idx_valid]
+        else:
+            # Fallback to original utilities if all smoothed values are NaN
+            max_idx = np.argmax(utilities)
+            max_alloc = allocs[max_idx]
+        
+        # Override the grid-based optimal allocation with the smoothed curve maximum
         optimal_initial_allocation = max_alloc
         
         if verbose:
-            print(f"Debug: Max utility allocation from curve: {max_alloc:.4f}")
+            print(f"Debug: Max utility allocation from smoothed curve: {max_alloc:.4f}")
             print(f"Debug: Grid-based optimal allocation: {policy[0, w0_idx, p0_idx]:.4f}")
-            print(f"Debug: Using curve maximum as optimal allocation")
+            if moving_avg > 1:
+                original_max_idx = np.argmax(utilities)
+                original_max_alloc = allocs[original_max_idx]
+                print(f"Debug: Original max allocation (before smoothing): {original_max_alloc:.4f}")
+            print(f"Debug: Using smoothed curve maximum as optimal allocation")
     
     if verbose:
         print(f"Initial wealth: {initial_wealth:.2f}, closest grid idx: {w0_idx}")
