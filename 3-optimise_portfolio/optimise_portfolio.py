@@ -298,7 +298,7 @@ def main():
 
     policy, value_fn, alloc0 = dynamic_programming_policy(
         mu_seq, sigma_seq, utility_func, initial_wealth, current_log_price,
-        n_steps, price_grid_size=101, wealth_grid_size=101, verbose=True
+        n_steps, price_grid_size=21, wealth_grid_size=21, verbose=True
     )
     print("Optimal initial allocation:", alloc0)
 
