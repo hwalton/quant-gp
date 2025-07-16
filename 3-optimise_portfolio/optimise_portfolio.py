@@ -300,8 +300,8 @@ def main():
     # --- Dynamic Programming Section ---
     # 12 monthly steps, get mu and sigma for each
     n_steps = 2
-    price_grid_size = 19
-    wealth_grid_size = 19
+    price_grid_size = 73
+    wealth_grid_size = 73
     current_idx = len(y_actual)
     mu_seq = []
     sigma_seq = []
