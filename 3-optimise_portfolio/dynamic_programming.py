@@ -65,11 +65,50 @@ def dynamic_programming_policy(
                 if verbose and w_idx % (wealth_grid_size // 5) == 0 and p_idx % (price_grid_size // 5) == 0:
                     print(f"  [DP] t={t}, wealth_idx={w_idx}, log_price_idx={p_idx}, best_p={best_p:.2f}, best_val={best_val:.4f}")
     # Find closest grid points to current state
-    w0_idx = np.argmin(np.abs(wealth_grid - initial_wealth))
-    p0_idx = np.argmin(np.abs(price_grids[0] - current_log_price))
-    optimal_initial_allocation = policy[(0, w0_idx, p0_idx)]
+    w0_idx = np.searchsorted(wealth_grid, initial_wealth, side='left')
+    w0_idx = np.clip(w0_idx, 0, len(wealth_grid)-1)
+    p0_idx = np.searchsorted(price_grids[0], current_log_price, side='left')
+    p0_idx = np.clip(p0_idx, 0, len(price_grids[0])-1)
+    # Use interpolation for initial allocation
+    optimal_initial_allocation = interpolate_policy(
+        policy, wealth_grid, price_grids[0], initial_wealth, current_log_price
+    )
     if verbose:
         print(f"[DP] Initial wealth: {initial_wealth:.2f}, closest grid idx: {w0_idx}")
         print(f"[DP] Initial log_price: {current_log_price:.4f}, closest grid idx: {p0_idx}")
-        print(f"[DP] Optimal initial allocation: {optimal_initial_allocation:.2f}")
+        print(f"[DP] Interpolated optimal initial allocation: {optimal_initial_allocation:.4f}")
+        print("Initial wealth:", initial_wealth)
+        print("Wealth grid:", wealth_grid)
+        print("Initial wealth idx:", w0_idx)
+        print("Initial log price:", current_log_price)
+        print("Price grid:", price_grids[0])
+        print("Initial log price idx:", p0_idx)
+        print("Optimal allocation (grid):", policy[0, w0_idx, p0_idx])
     return policy, value_fn, optimal_initial_allocation
+
+def interpolate_policy(policy, wealth_grid, price_grid, initial_wealth, initial_log_price):
+    # Find indices below and above initial wealth
+    w_idx = np.searchsorted(wealth_grid, initial_wealth, side='left')
+    w_idx_low = max(w_idx - 1, 0)
+    w_idx_high = min(w_idx, len(wealth_grid) - 1)
+    # Find indices below and above initial log price
+    p_idx = np.searchsorted(price_grid, initial_log_price, side='left')
+    p_idx_low = max(p_idx - 1, 0)
+    p_idx_high = min(p_idx, len(price_grid) - 1)
+    # Bilinear interpolation
+    w0, w1 = wealth_grid[w_idx_low], wealth_grid[w_idx_high]
+    p0, p1 = price_grid[p_idx_low], price_grid[p_idx_high]
+    f00 = policy[0, w_idx_low, p_idx_low]
+    f01 = policy[0, w_idx_low, p_idx_high]
+    f10 = policy[0, w_idx_high, p_idx_low]
+    f11 = policy[0, w_idx_high, p_idx_high]
+    # Weights
+    dw = (initial_wealth - w0) / (w1 - w0) if w1 != w0 else 0
+    dp = (initial_log_price - p0) / (p1 - p0) if p1 != p0 else 0
+    alloc = (
+        f00 * (1-dw) * (1-dp) +
+        f01 * (1-dw) * dp +
+        f10 * dw * (1-dp) +
+        f11 * dw * dp
+    )
+    return alloc
