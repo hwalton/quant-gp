@@ -41,7 +41,7 @@ def build_kernel():
         C(1.0, (1e-3, 1.0)) * ExpSineSquared(length_scale=10.0, periodicity=208.0,
                                              length_scale_bounds=(0.1, 100.0),
                                              periodicity_bounds=(150, 300)) +
-        WhiteKernel(noise_level=0.1, noise_level_bounds=(0.001, 200.0))
+        WhiteKernel(noise_level=1, noise_level_bounds=(0.005, 200.0))
     )
 
 
@@ -55,14 +55,6 @@ def fit_gp(X, residuals, kernel):
     gp.fit(X, residuals)
     
     # Print optimized kernel parameters
-    print("Optimized Kernel Parameters:")
-    print("-" * 40)
-    theta = gp.kernel_.theta
-    bounds = gp.kernel_.bounds
-    
-    for i, (param_val, bound) in enumerate(zip(theta, bounds)):
-        print(f"Parameter {i+1}: {param_val:.6f}; [{bound[0]:.6f}, {bound[1]:.6f}]")
-    
     print(f"\nOptimized kernel: {gp.kernel_}")
     print("-" * 40)
     
