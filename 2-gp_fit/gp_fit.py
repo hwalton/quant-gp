@@ -18,7 +18,7 @@ class Config:
     y_pred_pkl: str ='y_pred.npy'
     y_std_pkl: str ='y_std.npy'
     plot_path: str ='gp_output.png'
-    points_into_future: int =48*7
+    points_into_future: int =48*4
     y_limit: tuple =(4, 18)
 
 def load_data(cfg: Config):
@@ -84,7 +84,7 @@ def plot_results(X, y, X_pred, y_pred, y_std, log_trend, cfg: Config):
     
     ax.plot(X, y, 'kx', label='Observed BTC prices')
     ax.plot(X_pred, y_pred, 'b-', label='GP mean prediction')
-    ax.plot(X_pred, log_trend(X_pred.ravel()), 'g--', label='Log trend fit')  # <-- added line
+    ax.plot(X_pred, log_trend(X_pred.ravel()), 'g--', label='Log trend fit')
     ax.fill_between(X_pred.ravel(), y_pred - y_std, y_pred + y_std, alpha=0.2, label='1σ confidence')
     
     ax.set_xlabel('Weeks since start')
@@ -92,7 +92,17 @@ def plot_results(X, y, X_pred, y_pred, y_std, log_trend, cfg: Config):
     ax.set_title('Gaussian Process Regression on BTC Weekly Prices')
     ax.legend()
     ax.grid(True)
-    ax.set_ylim(*cfg.y_limit)
+    
+    # Calculate dynamic y-limits to include all data
+    y_min = min(y.min(), (y_pred - y_std).min())
+    y_max = max(y.max(), (y_pred + y_std).max())
+    
+    # Add some padding (10% of the range)
+    y_range = y_max - y_min
+    padding = y_range * 0.1
+    
+    ax.set_ylim(y_min - padding, y_max + padding)
+    
     fig.tight_layout()
     fig.savefig(cfg.plot_path)
     plt.close('all')
