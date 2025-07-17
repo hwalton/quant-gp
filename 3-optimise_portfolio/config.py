@@ -5,7 +5,7 @@ class Config:
     x_pred_pkl: str = '../2-gp_fit/X_pred.npy'
     y_pred_pkl: str = '../2-gp_fit/y_pred.npy'
     y_std_pkl: str = '../2-gp_fit/y_std.npy'
-    log_csv: str = '../0-data/btc_weekly_prices.csv'
+    price_csv: str = '../0-data/bitcoin_combined_weekly_data.csv'
     initial_wealth: float = 1000.0
     utility_function: str = ['step', 'smooth_step', 'sigmoid', 'tanh', 'tanh_custom', 'identity', 'linear', 'log', 'sqrt', 'crra'][4]
     gamma: float = 1.5  # Only used if utility_function is 'crra'

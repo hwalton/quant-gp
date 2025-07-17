@@ -19,8 +19,8 @@ def load_gp_predictions(cfg: Config):
     y_pred = np.load(cfg.y_pred_pkl)
     y_std = np.load(cfg.y_std_pkl)
 
-    df = pd.read_csv(cfg.log_csv, sep=';').sort_values(by='timestamp')
-    current_log_price = np.log(df['close'].astype(float).values[-1])
+    df = pd.read_csv(cfg.price_csv, sep=',').sort_values(by='timestamp')
+    current_log_price = np.log(df['price'].astype(float).values[-1])
 
     current_index = len(df)
     target_index = np.searchsorted(X_pred.ravel(), current_index)
