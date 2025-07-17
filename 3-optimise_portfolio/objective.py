@@ -13,14 +13,14 @@ class Config:
     y_std_pkl: str = '../2-gp_fit/y_std.npy'
     log_csv: str = '../0-data/btc_weekly_prices.csv'
     initial_wealth: float = 1000.0
-    utility_function: str = ['step', 'smooth_step', 'sigmoid', 'tanh', 'tanh_custom', 'identity', 'linear', 'log', 'sqrt', 'crra'][1]
-    gamma: float = 0.8  # Only used if utility_function is 'crra'
+    utility_function: str = ['step', 'smooth_step', 'sigmoid', 'tanh', 'tanh_custom', 'identity', 'linear', 'log', 'sqrt', 'crra'][9]
+    gamma: float = 1.5  # Only used if utility_function is 'crra'
     sigmoid_k: float = 25.0
     w0: float = 0.98
-    step_threshold: float = 990
+    step_threshold: float = 900
     step_steepness: float = 100.0
 
-    horizon_weeks: int = 12
+    horizon_weeks: int = 4
     rebalance_every: int = 4  # weeks
 
 def get_utility_func(cfg: Config):
@@ -50,7 +50,7 @@ def get_utility_func(cfg: Config):
     elif cfg.utility_function == 'tanh_custom':
         return lambda w: np.tanh((w - 700) / 150) + 1 + w / 5000
     elif cfg.utility_function == 'crra':
-        gamma = 0.8
+        gamma = cfg.gamma
         return lambda w: (w**(1-gamma) - 1) / (1-gamma) if gamma != 1 else np.log(w)
     else:
         raise ValueError(f"Unsupported utility function: {cfg.utility_function}")
@@ -72,40 +72,82 @@ def load_gp_predictions(cfg: Config):
     return mu_seq, sigma_seq, current_log_price
 
 
-def simulate_terminal_wealth(p, mu_seq, sigma_seq, current_log_price, cfg, n_samples=1000):
-    T_weeks = cfg.horizon_weeks
-    rebalance_every = cfg.rebalance_every
-    T = T_weeks // rebalance_every
-    assert len(p) == T, f"Expected {T} allocations in p for {T_weeks} weeks of horizon"
+# def simulate_terminal_wealth(p, mu_seq, sigma_seq, current_log_price, cfg, n_samples=1000):
+#     T_weeks = cfg.horizon_weeks
+#     rebalance_every = cfg.rebalance_every
+#     T = T_weeks // rebalance_every
+#     assert len(p) == T, f"Expected {T} allocations in p for {T_weeks} weeks of horizon"
 
-    # Sample weekly log returns
-    log_returns = np.random.normal(loc=mu_seq, scale=sigma_seq, size=(n_samples, T_weeks))
+#     # Convert GP-predicted log-prices to weekly log-returns
+#     weekly_log_returns = np.random.normal(
+#         loc=mu_seq - current_log_price,
+#         scale=sigma_seq,
+#         size=(n_samples, T_weeks)
+#     )
+
+#     # Initialise log price paths
+#     log_price_paths = np.zeros((n_samples, T_weeks + 1))
+#     log_price_paths[:, 0] = current_log_price
+#     for t in range(T_weeks):
+#         log_price_paths[:, t + 1] = log_price_paths[:, t] + weekly_log_returns[:, t]
+
+#     # Initialise wealth in actual currency (e.g., USD)
+#     wealth = np.full(n_samples, cfg.initial_wealth)
+
+#     for t in range(T):
+#         start_week = t * rebalance_every
+#         end_week = start_week + rebalance_every
+
+#         for i in range(n_samples):
+#             current_price = np.exp(log_price_paths[i, start_week])
+#             future_price = np.exp(log_price_paths[i, end_week])
+
+#             # Rebalance at start_week using current wealth
+#             cash = wealth[i] * (1 - p[t])
+#             btc_units = (wealth[i] * p[t]) / current_price
+
+#             # Wealth at end of period = cash + BTC value
+#             wealth[i] = cash + btc_units * future_price
+
+#     # Debug: Print summary statistics
+#     print(f"Debug: Final wealth stats - Min: {wealth.min():.2f}, Max: {wealth.max():.2f}, Mean: {wealth.mean():.2f}")
+
+#     return wealth
+
+# def objective(p, mu_seq, sigma_seq, current_log_price, cfg, utility=None, n_samples=1000):
+#     if utility is None:
+#         utility = get_utility_func(cfg)
     
-    # Build cumulative log-price paths
-    log_prices = np.cumsum(np.hstack([current_log_price * np.ones((n_samples, 1)), log_returns]), axis=1)
+#     final_wealth = simulate_terminal_wealth(p, mu_seq, sigma_seq, current_log_price, cfg, n_samples=n_samples)
+#     utilities = np.array([utility(w) for w in final_wealth])
+#     return np.mean(utilities)
 
-    wealth = np.ones(n_samples) * cfg.initial_wealth
-    for t in range(T):
-        start_week = t * rebalance_every
-        end_week = start_week + rebalance_every
+def objective_numerical_integral(p, mu_seq, sigma_seq, current_log_price, cfg):
+    utility = get_utility_func(cfg)
 
-        # Use constant allocation during this interval
-        cash = wealth * (1 - p[t])
-        btc_units = (wealth * p[t]) / np.exp(log_prices[:, start_week])
+    # Grid setup (assumes only one future timepoint, extend later)
+    mu = mu_seq[0]
+    sigma = sigma_seq[0]
+    grid = np.linspace(mu - 4*sigma, mu + 4*sigma, 100)
+    dx = grid[1] - grid[0]
 
-        for week in range(start_week, end_week):
-            wealth = cash + btc_units * np.exp(log_prices[:, week + 1])
+    total = 0.0
+    for x1 in grid:
+        x0 = current_log_price
+        log_return = x1 - x0
 
-    return wealth  # shape (n_samples,)
+        current_price = np.exp(x0)
+        future_price = np.exp(x1)
 
+        cash = cfg.initial_wealth * (1 - p[0])
+        btc_units = (cfg.initial_wealth * p[0]) / current_price
+        wealth_T = cash + btc_units * future_price
 
-def objective(p, mu_seq, sigma_seq, current_log_price, cfg, utility=None, n_samples=1000):
-    if utility is None:
-        utility = get_utility_func(cfg)
-    
-    final_wealth = simulate_terminal_wealth(p, mu_seq, sigma_seq, current_log_price, cfg, n_samples=n_samples)
-    utilities = np.array([utility(w) for w in final_wealth])
-    return np.mean(utilities)
+        u = utility(wealth_T)
+        pdf = norm.pdf(x1, loc=mu, scale=sigma)
+        total += u * pdf * dx
+
+    return total
 
 def run_bayesian_optimisation(cfg, mu_seq, sigma_seq, current_log_price, months=12):
     # Search space: p_t in [0, 1] for each month
@@ -116,7 +158,7 @@ def run_bayesian_optimisation(cfg, mu_seq, sigma_seq, current_log_price, months=
     @use_named_args(search_space)
     def objective_wrapped(**kwargs):
         p = np.array([kwargs[f"p{i}"] for i in range(months)])
-        util = objective(p, mu_seq, sigma_seq, current_log_price, cfg, utility=utility)
+        util = objective_numerical_integral(p, mu_seq, sigma_seq, current_log_price, cfg)
         return -util  # Negative for minimisation
 
     result = gp_minimize(
@@ -145,7 +187,7 @@ def main():
 
     # Evaluate objective at a naive initial guess (e.g. 50/50 BTC)
     p_init = np.full(T, 0.5)
-    expected_util = objective(p_init, mu_seq, sigma_seq, current_log_price, cfg)
+    expected_util = objective_numerical_integral(p_init, mu_seq, sigma_seq, current_log_price, cfg)
     print(f"Initial Expected Utility: {expected_util:.4f}")
     print(f"Initial Allocation: {np.round(p_init, 3)}")
 
