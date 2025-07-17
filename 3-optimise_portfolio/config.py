@@ -16,3 +16,5 @@ class Config:
 
     horizon_weeks: int = 4*4
     rebalance_every: int = 4  # weeks
+
+    n_calls_optimiser: int = 25  # Number of calls to the optimiser
