@@ -187,7 +187,7 @@ def run_bayesian_optimisation(cfg, mu_seq, sigma_seq, current_log_price, months=
     result = gp_minimize(
         func=objective_wrapped,
         dimensions=search_space,
-        n_calls=10,
+        n_calls=25,
         n_initial_points=10,
         acq_func="EI",  # Expected improvement
         random_state=42,
@@ -201,22 +201,6 @@ def run_bayesian_optimisation(cfg, mu_seq, sigma_seq, current_log_price, months=
 
 def plot_figures(mu, sigma, current_log_price, optimal_weight, cfg: Config):
     """Generate all visualization plots and save as PNG files"""
-    
-    # Define single-period expected utility function for plotting
-    def expected_utility_single_period(pp, mu_log_price, sigma_log_price, current_log_price, cfg):
-        utility = get_utility_func(cfg)
-        
-        def integrand(pred_log_price):
-            # Portfolio calculation
-            cash_portion = cfg.initial_wealth * (1 - pp)
-            btc_units = (cfg.initial_wealth * pp) / np.exp(current_log_price)
-            btc_value = btc_units * np.exp(pred_log_price)
-            portfolio_value = cash_portion + btc_value
-            
-            return utility(portfolio_value) * norm.pdf(pred_log_price, loc=mu_log_price, scale=sigma_log_price)
-        
-        result, _ = quad(integrand, mu_log_price - 6*sigma_log_price, mu_log_price + 6*sigma_log_price)
-        return -result  # Negative for minimization
     
     def plot_wealth_distribution():
         pred_log_price_vals = np.linspace(mu - 5 * sigma, mu + 5 * sigma, 1000)
@@ -244,7 +228,7 @@ def plot_figures(mu, sigma, current_log_price, optimal_weight, cfg: Config):
         
         plt.xlabel('Simulated Future Wealth ($)')
         plt.ylabel('Probability Density')
-        plt.title('Wealth Distribution of Optimal Portfolio')
+        plt.title('Wealth Distribution of Optimal Portfolio After 1 Step')
         
         # Fixed scale: always 0 to 2x initial wealth
         plt.xlim(0, 2 * cfg.initial_wealth)
@@ -309,7 +293,7 @@ def plot_figures(mu, sigma, current_log_price, optimal_weight, cfg: Config):
         
         plt.xlabel('Utility Value')
         plt.ylabel('Probability Density')
-        plt.title('Distribution of Portfolio Utility')
+        plt.title('Distribution of Portfolio Utility After 1 Step')
         
         plt.grid(True, alpha=0.3)
         plt.legend()
