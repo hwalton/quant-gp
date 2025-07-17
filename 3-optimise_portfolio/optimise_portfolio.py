@@ -19,6 +19,7 @@ class Config:
     utility_function: str = ['step', 'smooth_step', 'sigmoid', 'tanh', 'tanh_custom', 'identity', 'linear', 'log', 'sqrt', 'crra'][4]  # Use smooth_step
     sigmoid_k: float = 25.0
     w0: float = 0.98
+    gamma: float = 1.15 # For CRRA utility function
     predict_index_offset: int = 10
     y_limit: tuple = (4, 18)
     step_threshold: float = 1001
@@ -59,8 +60,7 @@ def get_utility_func(cfg: Config):
     elif cfg.utility_function == 'tanh_custom':
         return lambda w: np.tanh((w - 700) / 150) + 1 + w / 5000
     elif cfg.utility_function == 'crra':
-        gamma = 0.8
-        return lambda w: (w**(1-gamma) - 1) / (1-gamma) if gamma != 1 else np.log(w)
+        return lambda w: (w**(1-cfg.gamma) - 1) / (1-cfg.gamma) if cfg.gamma != 1 else np.log(w)
     else:
         raise ValueError(f"Unsupported utility function: {cfg.utility_function}")
 
