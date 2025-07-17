@@ -14,7 +14,7 @@ class Config:
     step_threshold: float = 1100
     step_steepness: float = 100.0
 
-    horizon_weeks: int = 4*5
+    horizon_weeks: int = 4*2
     rebalance_every: int = 4  # weeks
 
-    n_calls_optimiser: int = 10  # Number of calls to the optimiser
+    n_calls_optimiser: int = 25  # Number of calls to the optimiser
