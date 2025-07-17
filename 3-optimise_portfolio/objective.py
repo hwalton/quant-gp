@@ -47,8 +47,8 @@ def objective_numerical_integral(p, mu_seq, sigma_seq, current_log_price, cfg):
         grid_points_per_dim -= 1
         actual_paths = grid_points_per_dim ** T
     
-    print(f"Using {grid_points_per_dim} grid points per dimension for {T} dimensions")
-    print(f"Total paths: {actual_paths:,}")
+    # print(f"Using {grid_points_per_dim} grid points per dimension for {T} dimensions")
+    # print(f"Total paths: {actual_paths:,}")
 
     # Build 1D grids for each future rebalance log-price x_t
     grid_limits = [
@@ -155,12 +155,12 @@ def main():
     cfg = Config()
     mu_seq, sigma_seq, current_log_price = load_gp_predictions(cfg)
     
-    # Debug: Check expected returns by period
-    print(f"Current log price: {current_log_price:.4f}")
-    print(f"GP Predictions by period:")
-    for i in range(len(mu_seq)):
-        expected_return = mu_seq[i] - current_log_price
-        print(f"  Week {i}: μ={mu_seq[i]:.4f}, expected return={expected_return:.4f}")
+    # # Debug: Check expected returns by period
+    # print(f"Current log price: {current_log_price:.4f}")
+    # print(f"GP Predictions by period:")
+    # for i in range(len(mu_seq)):
+    #     expected_return = mu_seq[i] - current_log_price
+    #     print(f"  Week {i}: μ={mu_seq[i]:.4f}, expected return={expected_return:.4f}")
     
     # Number of rebalancing points = horizon_weeks / rebalance_every
     T = cfg.horizon_weeks // cfg.rebalance_every
@@ -179,10 +179,10 @@ def main():
     print(np.round(optimal_p, 3))
     print(f"Maximum expected utility: {max_util:.4f}")
 
-    # Print timing information
-    end_time = time.time()
-    elapsed_time = end_time - start_time
-    print(f"\nTotal execution time: {elapsed_time:.2f} seconds")
+    mid_time = time.time()
+    elapsed_time = mid_time - start_time
+    print(f"\nElapsed time for optimisation: {elapsed_time:.2f} seconds")
+
 
     # Generate all plots using first period data for visualization
     mu_first_period = mu_seq[0]  # First period prediction
@@ -192,6 +192,10 @@ def main():
     plot_figures(mu_first_period, sigma_first_period, current_log_price, optimal_weight_first_period, cfg)
     plot_final_distributions(mu_seq, sigma_seq, current_log_price, optimal_p, cfg)
 
+    # Print timing information
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    print(f"\nTotal execution time: {elapsed_time:.2f} seconds")
 
 if __name__ == '__main__':
     main()
