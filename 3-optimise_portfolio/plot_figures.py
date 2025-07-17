@@ -360,6 +360,57 @@ def plot_final_utility_distribution(mu_seq, sigma_seq, current_log_price, optima
     plt.savefig("final_utility_distribution.png", dpi=150)
     plt.close()
 
+def plot_allocation_vs_utility(mu_seq, sigma_seq, current_log_price, optimal_p, cfg: Config, grid_points_per_dim, objective_func):
+    """Plot first-step BTC allocation vs expected utility, keeping future allocations fixed"""
+    T = len(optimal_p)
+    
+    # Range of BTC allocations from 0% to 100% for FIRST step only
+    allocation_range = np.linspace(0, 1, 21)  # 101 points from 0% to 100%
+    expected_utilities = []
+    
+    print(f"Calculating allocation vs utility plot with {len(allocation_range)} points...")
+    
+    for i, first_allocation in enumerate(allocation_range):
+        if i % 20 == 0:  # Progress indicator every 20 points
+            print(f"  Processing allocation {i+1}/{len(allocation_range)}: {first_allocation:.1%}")
+        
+        # Create allocation vector: vary first, keep rest optimal
+        p_test = np.array(optimal_p)
+        p_test[0] = first_allocation
+        
+        # Just call the objective function with the new allocation
+        expected_utility_val = objective_func(p_test, mu_seq, sigma_seq, current_log_price, cfg, grid_points_per_dim)
+        expected_utilities.append(expected_utility_val)
+    
+    expected_utilities = np.array(expected_utilities)
+    
+    plt.figure(figsize=(10, 6))
+    plt.plot(allocation_range * 100, expected_utilities, linewidth=2, color='green')
+    plt.axvline(optimal_p[0] * 100, color='red', linestyle='--', 
+                label=f'Optimal First Allocation: {optimal_p[0]:.1%}', linewidth=2)
+    
+    # Mark the optimal point
+    optimal_utility = expected_utilities[np.argmin(np.abs(allocation_range - optimal_p[0]))]
+    plt.plot(optimal_p[0] * 100, optimal_utility, 'ro', markersize=8, 
+             label=f'Optimal Utility: {optimal_utility:.4f}')
+    
+    plt.xlabel('First Step BTC Allocation (%)')
+    plt.ylabel('Expected Utility')
+    plt.title('Expected Utility vs First Step BTC Allocation (Multi-Step)')
+    plt.grid(True, alpha=0.3)
+    plt.legend()
+    plt.tight_layout()
+    
+    # Add statistics text
+    plt.text(0.02, 0.98, f'Maximum Expected Utility: {np.max(expected_utilities):.4f}\nOptimal First Allocation: {optimal_p[0]:.1%}\nFuture Allocations: {np.round(optimal_p[1:], 2)}', 
+             transform=plt.gca().transAxes, verticalalignment='top', 
+             bbox=dict(boxstyle='round', facecolor='lightgreen', alpha=0.8))
+    
+    plt.savefig("allocation_vs_utility.png", dpi=150)
+    plt.close()
+    
+    print("Completed allocation vs utility plot")
+
 def plot_figures(mu, sigma, current_log_price, optimal_weight, cfg: Config):
     """Generate all single-step visualization plots and save as PNG files"""
     
@@ -371,6 +422,10 @@ def plot_figures(mu, sigma, current_log_price, optimal_weight, cfg: Config):
     
     plot_utility_function(cfg)
     print("Saved utility_func.png")
+    
+    # Remove this line - we call it separately in main() with multi-step parameters
+    # plot_allocation_vs_utility(mu, sigma, current_log_price, optimal_weight, cfg)
+    # print("Saved allocation_vs_utility.png")
 
 def plot_final_distributions(mu_seq, sigma_seq, current_log_price, optimal_p, cfg: Config):
     """Generate final distribution plots after all steps"""
