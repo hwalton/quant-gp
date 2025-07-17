@@ -175,8 +175,6 @@ def objective_numerical_integral(p, mu_seq, sigma_seq, current_log_price, cfg):
 def run_bayesian_optimisation(cfg, mu_seq, sigma_seq, current_log_price, months=12):
     # Search space: p_t in [0, 1] for each month
     search_space = [Real(0.0, 1.0, name=f"p{i}") for i in range(months)]
-    
-    utility = get_utility_func(cfg)
 
     @use_named_args(search_space)
     def objective_wrapped(**kwargs):
