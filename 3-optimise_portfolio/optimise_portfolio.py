@@ -20,7 +20,7 @@ class Config:
     sigmoid_k: float = 25.0
     w0: float = 0.98
     gamma: float = 1.15 # For CRRA utility function
-    h_factor: float = 0.25  # Horizon shift factor for tanh_custom_horz
+    h_factor: float = 0.25  # Horizon shift factor for tanh_custom_horz (0 for planning to get out soon, 1 for long-term holding)
     predict_index_offset: int = 10
     y_limit: tuple = (4, 18)
     step_threshold: float = 1001
