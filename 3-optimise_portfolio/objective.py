@@ -6,6 +6,7 @@ from itertools import product
 from skopt import gp_minimize
 from skopt.space import Real
 from skopt.utils import use_named_args
+import time
 
 @dataclass(frozen=True)
 class Config:
@@ -97,32 +98,59 @@ def objective_numerical_integral(p, mu_seq, sigma_seq, current_log_price, cfg):
     wealth = np.full(n_paths, cfg.initial_wealth)
     x_prev = np.full(n_paths, current_log_price)
 
+    # Pre-compute p array for faster indexing
+    p_array = np.array(p)
+    
     for t in range(T):
         x_now = all_paths[:, t]
+        # Vectorized exponential operations
         price_prev = np.exp(x_prev)
         price_now = np.exp(x_now)
 
-        cash = wealth * (1 - p[t])
-        btc = (wealth * p[t]) / price_prev
+        # Vectorized portfolio calculations
+        p_t = p_array[t]
+        cash = wealth * (1 - p_t)
+        btc = (wealth * p_t) / price_prev
         wealth = cash + btc * price_now
 
         x_prev = x_now
 
-    # Vectorized utility calculation
-    utilities = np.array([utility(w) for w in wealth])
+    # Vectorize utility calculation where possible
+    if cfg.utility_function in ['log', 'sqrt', 'identity', 'linear']:
+        # These can be fully vectorized
+        if cfg.utility_function == 'log':
+            utilities = np.log(np.maximum(wealth, 1e-10))  # Avoid log(0)
+        elif cfg.utility_function == 'sqrt':
+            utilities = np.sqrt(np.maximum(wealth, 0))
+        elif cfg.utility_function in ['identity', 'linear']:
+            utilities = wealth
+        elif cfg.utility_function == 'crra':
+            gamma = cfg.gamma
+            if gamma == 1.0:
+                utilities = np.log(np.maximum(wealth, 1e-10))
+            else:
+                utilities = (np.maximum(wealth, 1e-10)**(1-gamma) - 1) / (1-gamma)
+    else:
+        # For complex utility functions, use list comprehension (still faster than loop)
+        utilities = np.array([utility(w) for w in wealth])
 
-    # Vectorized probability density calculation
-    log_probs = np.zeros(n_paths)
-    for t in range(T):
-        log_probs += norm.logpdf(all_paths[:, t], loc=mu_seq[t], scale=sigma_seq[t])
+    # More efficient probability calculation
+    # Pre-compute mu and sigma arrays
+    mu_array = np.array([mu_seq[t] for t in range(T)])
+    sigma_array = np.array([sigma_seq[t] for t in range(T)])
     
+    # Vectorized log probability calculation
+    log_probs = np.sum(
+        norm.logpdf(all_paths, loc=mu_array, scale=sigma_array), 
+        axis=1
+    )
     prob_densities = np.exp(log_probs)
 
-    # Volume element (same for all paths)
+    # Pre-compute volume element
     volume_element = np.prod(dx)
 
     # Final integration
-    total = np.sum(utilities * prob_densities * volume_element)
+    total = np.sum(utilities * prob_densities) * volume_element
 
     return total
 
@@ -154,6 +182,8 @@ def run_bayesian_optimisation(cfg, mu_seq, sigma_seq, current_log_price, months=
     return optimal_p, max_utility, result
 
 def main():
+    start_time = time.time()
+
     cfg = Config()
     mu_seq, sigma_seq, current_log_price = load_gp_predictions(cfg)
     
@@ -180,6 +210,11 @@ def main():
     print(f"\nOptimal allocation vector:")
     print(np.round(optimal_p, 3))
     print(f"Maximum expected utility: {max_util:.4f}")
+
+        # Print timing information
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    print(f"\nTotal execution time: {elapsed_time:.2f} seconds")
 
 
 if __name__ == '__main__':
