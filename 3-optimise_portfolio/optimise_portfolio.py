@@ -13,6 +13,20 @@ from plot_figures import plot_figures, plot_final_distributions
 from get_utilty_function import get_utility_func
 
 
+def calculate_grid_parameters(T, max_total_paths=1000000):
+    grid_points_per_dim = int(max_total_paths**(1/T))
+    
+    # Ensure we don't exceed the limit
+    actual_paths = grid_points_per_dim ** T
+    if actual_paths > max_total_paths:
+        grid_points_per_dim -= 1
+        actual_paths = grid_points_per_dim ** T
+    
+    print(f"Using {grid_points_per_dim} grid points per dimension for {T} dimensions")
+    print(f"Total paths: {actual_paths:,}")
+    
+    return grid_points_per_dim, actual_paths
+
 
 def load_gp_predictions(cfg: Config):
     X_pred = np.load(cfg.x_pred_pkl)
@@ -31,24 +45,11 @@ def load_gp_predictions(cfg: Config):
     return mu_seq, sigma_seq, current_log_price
 
 
-def objective_numerical_integral(p, mu_seq, sigma_seq, current_log_price, cfg):
+def objective_numerical_integral(p, mu_seq, sigma_seq, current_log_price, cfg, grid_points_per_dim):
     utility = get_utility_func(cfg)
 
     T = cfg.horizon_weeks // cfg.rebalance_every
     assert len(p) == T, f"Expected p of length {T}"
-
-    # Calculate maximum grid points per dimension to stay under 1M paths
-    max_total_paths = 1000000
-    grid_points_per_dim = int(max_total_paths**(1/T))
-    
-    # Ensure we don't exceed the limit
-    actual_paths = grid_points_per_dim ** T
-    if actual_paths > max_total_paths:
-        grid_points_per_dim -= 1
-        actual_paths = grid_points_per_dim ** T
-    
-    # print(f"Using {grid_points_per_dim} grid points per dimension for {T} dimensions")
-    # print(f"Total paths: {actual_paths:,}")
 
     # Build 1D grids for each future rebalance log-price x_t
     grid_limits = [
@@ -124,14 +125,14 @@ def objective_numerical_integral(p, mu_seq, sigma_seq, current_log_price, cfg):
 
     return total
 
-def run_bayesian_optimisation(cfg, mu_seq, sigma_seq, current_log_price, months=12):
+def run_bayesian_optimisation(cfg, mu_seq, sigma_seq, current_log_price, months, grid_points_per_dim):
     # Search space: p_t in [0, 1] for each month
     search_space = [Real(0.0, 1.0, name=f"p{i}") for i in range(months)]
 
     @use_named_args(search_space)
     def objective_wrapped(**kwargs):
         p = np.array([kwargs[f"p{i}"] for i in range(months)])
-        util = objective_numerical_integral(p, mu_seq, sigma_seq, current_log_price, cfg)
+        util = objective_numerical_integral(p, mu_seq, sigma_seq, current_log_price, cfg, grid_points_per_dim)
         return -util  # Negative for minimisation
 
     result = gp_minimize(
@@ -155,25 +156,21 @@ def main():
     cfg = Config()
     mu_seq, sigma_seq, current_log_price = load_gp_predictions(cfg)
     
-    # # Debug: Check expected returns by period
-    # print(f"Current log price: {current_log_price:.4f}")
-    # print(f"GP Predictions by period:")
-    # for i in range(len(mu_seq)):
-    #     expected_return = mu_seq[i] - current_log_price
-    #     print(f"  Week {i}: μ={mu_seq[i]:.4f}, expected return={expected_return:.4f}")
-    
     # Number of rebalancing points = horizon_weeks / rebalance_every
     T = cfg.horizon_weeks // cfg.rebalance_every
-
+    
+    # Calculate grid parameters once
+    grid_points_per_dim, actual_paths = calculate_grid_parameters(T)
+    
     # Evaluate objective at a naive initial guess (e.g. 50/50 BTC)
     p_init = np.full(T, 0.5)
-    expected_util = objective_numerical_integral(p_init, mu_seq, sigma_seq, current_log_price, cfg)
+    expected_util = objective_numerical_integral(p_init, mu_seq, sigma_seq, current_log_price, cfg, grid_points_per_dim)
     print(f"Initial Expected Utility: {expected_util:.4f}")
     print(f"Initial Allocation: {np.round(p_init, 3)}")
 
     # Run Bayesian optimisation
     print("\nRunning Bayesian Optimisation...")
-    optimal_p, max_util, result = run_bayesian_optimisation(cfg, mu_seq, sigma_seq, current_log_price, T)
+    optimal_p, max_util, result = run_bayesian_optimisation(cfg, mu_seq, sigma_seq, current_log_price, T, grid_points_per_dim)
 
     print(f"\nOptimal allocation vector:")
     print(np.round(optimal_p, 3))
@@ -182,7 +179,6 @@ def main():
     mid_time = time.time()
     elapsed_time = mid_time - start_time
     print(f"\nElapsed time for optimisation: {elapsed_time:.2f} seconds")
-
 
     # Generate all plots using first period data for visualization
     mu_first_period = mu_seq[0]  # First period prediction
