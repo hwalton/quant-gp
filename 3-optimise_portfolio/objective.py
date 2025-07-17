@@ -9,8 +9,9 @@ from scipy.integrate import quad
 import time
 
 from config import Config
-from plot_figures import plot_figures
+from plot_figures import plot_figures, plot_final_distributions
 from get_utilty_function import get_utility_func
+
 
 
 def load_gp_predictions(cfg: Config):
@@ -189,6 +190,7 @@ def main():
     optimal_weight_first_period = optimal_p[0]  # First period allocation
     
     plot_figures(mu_first_period, sigma_first_period, current_log_price, optimal_weight_first_period, cfg)
+    plot_final_distributions(mu_seq, sigma_seq, current_log_price, optimal_p, cfg)
 
 
 if __name__ == '__main__':
