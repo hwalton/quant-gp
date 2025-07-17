@@ -19,10 +19,10 @@ class Config:
     gamma: float = 1.5  # Only used if utility_function is 'crra'
     sigmoid_k: float = 25.0
     w0: float = 0.98
-    step_threshold: float = 900
+    step_threshold: float = 1100
     step_steepness: float = 100.0
 
-    horizon_weeks: int = 8
+    horizon_weeks: int = 4*3
     rebalance_every: int = 4  # weeks
 
 def get_utility_func(cfg: Config):
@@ -80,9 +80,22 @@ def objective_numerical_integral(p, mu_seq, sigma_seq, current_log_price, cfg):
     T = cfg.horizon_weeks // cfg.rebalance_every
     assert len(p) == T, f"Expected p of length {T}"
 
+    # Calculate maximum grid points per dimension to stay under 1M paths
+    max_total_paths = 1000000
+    grid_points_per_dim = int(max_total_paths**(1/T))
+    
+    # Ensure we don't exceed the limit
+    actual_paths = grid_points_per_dim ** T
+    if actual_paths > max_total_paths:
+        grid_points_per_dim -= 1
+        actual_paths = grid_points_per_dim ** T
+    
+    print(f"Using {grid_points_per_dim} grid points per dimension for {T} dimensions")
+    print(f"Total paths: {actual_paths:,}")
+
     # Build 1D grids for each future rebalance log-price x_t
     grid_limits = [
-        np.linspace(mu_seq[t] - 4*sigma_seq[t], mu_seq[t] + 4*sigma_seq[t], 30)
+        np.linspace(mu_seq[t] - 4*sigma_seq[t], mu_seq[t] + 4*sigma_seq[t], grid_points_per_dim)
         for t in range(T)
     ]
     dx = np.array([g[1] - g[0] for g in grid_limits])
@@ -116,7 +129,7 @@ def objective_numerical_integral(p, mu_seq, sigma_seq, current_log_price, cfg):
         x_prev = x_now
 
     # Vectorize utility calculation where possible
-    if cfg.utility_function in ['log', 'sqrt', 'identity', 'linear']:
+    if cfg.utility_function in ['log', 'sqrt', 'identity', 'linear', 'crra']:
         # These can be fully vectorized
         if cfg.utility_function == 'log':
             utilities = np.log(np.maximum(wealth, 1e-10))  # Avoid log(0)
