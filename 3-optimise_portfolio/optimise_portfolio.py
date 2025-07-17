@@ -166,7 +166,7 @@ def verify_optimal_allocation(optimal_p, mu_seq, sigma_seq, current_log_price, c
             test_utility = objective_func(test_p, mu_seq, sigma_seq, current_log_price, cfg, grid_points_per_dim)
             print(f"First allocation {test_p[0]:.3f}: {test_utility:.6f} (diff: {test_utility - optimal_utility:.6f})")
 
-def coordinate_descent_refinement(initial_p, mu_seq, sigma_seq, current_log_price, cfg, grid_points_per_dim):
+def coordinate_descent_refinement(initial_p, mu_seq, sigma_seq, current_log_price, cfg, grid_points_per_dim, max_recursive_calls=3):
     """More efficient refinement using coordinate descent for high-dimensional problems"""
     print("Using coordinate descent refinement...")
     
@@ -179,6 +179,7 @@ def coordinate_descent_refinement(initial_p, mu_seq, sigma_seq, current_log_pric
     print(f"Starting utility: {current_utility:.6f}")
     
     overall_improvement = False
+    found_edge_improvement = False
     
     # Iterate through each dimension
     for dim in range(T):
@@ -207,6 +208,11 @@ def coordinate_descent_refinement(initial_p, mu_seq, sigma_seq, current_log_pric
             current_p[dim] += best_delta
             current_utility = best_utility_for_dim
             overall_improvement = True
+            
+            # Check if we hit the edge (±0.1) - suggests more improvement possible
+            if abs(best_delta) == 0.1:
+                found_edge_improvement = True
+            
             print(f"  Improved dimension {dim}: {current_p[dim]:.3f} -> {current_utility:.6f} (delta: {best_delta:+.3f})")
         else:
             print(f"  No improvement for dimension {dim}")
@@ -217,6 +223,18 @@ def coordinate_descent_refinement(initial_p, mu_seq, sigma_seq, current_log_pric
         print(f"Final allocation: {np.round(current_p, 3)}")
     else:
         print("\nNo improvement found - Bayesian optimization result was already locally optimal")
+    
+    # If we found improvement at the edge (±0.1), recursively call for further refinement
+    if found_edge_improvement and max_recursive_calls > 0:
+        print(f"\nFound edge improvement (±0.1 delta), recursively searching further...")
+        print(f"Recursive calls remaining: {max_recursive_calls}")
+        
+        # Recursively call with current_p as the new starting point
+        final_p, final_utility = coordinate_descent_refinement(
+            current_p, mu_seq, sigma_seq, current_log_price, cfg, grid_points_per_dim, 
+            max_recursive_calls - 1
+        )
+        return final_p, final_utility
     
     return current_p, current_utility
 

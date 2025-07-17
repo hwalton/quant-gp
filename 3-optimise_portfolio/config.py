@@ -19,4 +19,4 @@ class Config:
 
     optimisation_method = ['bayesian', 'bayesian_with_refinement', 'bayesian_with_refinement2', 'analytical_gradient', 'coordinate', 'gradient'][1]
     
-    n_calls_optimiser: int = 25  # Number of calls to the optimiser
+    n_calls_optimiser: int = 15  # Number of calls to the optimiser
