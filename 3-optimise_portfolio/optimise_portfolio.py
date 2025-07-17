@@ -45,7 +45,7 @@ def load_gp_predictions(cfg: Config):
     return mu_seq, sigma_seq, current_log_price
 
 
-def objective_numerical_integral(p, mu_seq, sigma_seq, current_log_price, cfg, grid_points_per_dim):
+def objective_func(p, mu_seq, sigma_seq, current_log_price, cfg, grid_points_per_dim):
     utility = get_utility_func(cfg)
 
     T = cfg.horizon_weeks // cfg.rebalance_every
@@ -132,7 +132,7 @@ def run_bayesian_optimisation(cfg, mu_seq, sigma_seq, current_log_price, months,
     @use_named_args(search_space)
     def objective_wrapped(**kwargs):
         p = np.array([kwargs[f"p{i}"] for i in range(months)])
-        util = objective_numerical_integral(p, mu_seq, sigma_seq, current_log_price, cfg, grid_points_per_dim)
+        util = objective_func(p, mu_seq, sigma_seq, current_log_price, cfg, grid_points_per_dim)
         return -util  # Negative for minimisation
 
     result = gp_minimize(
@@ -164,7 +164,7 @@ def main():
     
     # Evaluate objective at a naive initial guess (e.g. 50/50 BTC)
     p_init = np.full(T, 0.5)
-    expected_util = objective_numerical_integral(p_init, mu_seq, sigma_seq, current_log_price, cfg, grid_points_per_dim)
+    expected_util = objective_func(p_init, mu_seq, sigma_seq, current_log_price, cfg, grid_points_per_dim)
     print(f"Initial Expected Utility: {expected_util:.4f}")
     print(f"Initial Allocation: {np.round(p_init, 3)}")
 
