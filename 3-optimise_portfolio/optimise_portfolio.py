@@ -19,12 +19,12 @@ class Config:
     log_csv: str = '../0-data/btc_weekly_prices.csv'
     
     # --- Portfolio and Prediction Settings ---
-    initial_wealth: float = 1000
+    initial_wealth: float = 100
     predict_index_offset: int = 52
     # y_limit: tuple = (4, 18) #TODO: Delete
     
     # --- Utility Function Configuration ---
-    utility_function: str = ['step', 'smooth_step', 'sigmoid', 'tanh', 'tanh_custom', 'identity', 'linear', 'log', 'sqrt', 'crra'][7]  # log utility for 1D DP
+    utility_function: str = ['step', 'smooth_step', 'sigmoid', 'tanh', 'tanh_custom', 'identity', 'linear', 'log', 'sqrt', 'crra', 'crra_softplus'][9]  # log utility for 1D DP
     # Step function parameters
     step_threshold: float = 1100
     step_steepness: float = 100.0  # Controls how sharp the transition is (for smooth_step)
@@ -34,7 +34,7 @@ class Config:
     # CRRA parameter (gamma) is hardcoded in get_utility_func
     
     # --- Dynamic Programming Configuration ---
-    dp_invest_horizon_steps: int = 6 # Number of time steps for DP
+    dp_invest_horizon_steps: int = 2 # Number of time steps for DP
     dp_price_grid_size: int = 73  # Grid size for price discretization
     dp_wealth_grid_size: int = 73  # Grid size for wealth discretization
     dp_weeks_per_step: int = 4  # Weeks between time steps (4 = monthly)
@@ -50,6 +50,9 @@ def load_data(cfg: Config):
     df = pd.read_csv(cfg.log_csv, sep=';').sort_values(by='timestamp')
     y_actual = np.log(df['close'].astype(float).values)
     return X_pred, y_pred, y_std, y_actual
+
+def softplus(x, beta=1.0):
+    return np.log1p(np.exp(beta * x)) / beta
 
 def get_utility_func(cfg: Config):
     if cfg.utility_function == 'identity' or cfg.utility_function == 'linear':
@@ -78,8 +81,15 @@ def get_utility_func(cfg: Config):
     elif cfg.utility_function == 'tanh_custom':
         return lambda w: np.tanh((w - 700) / 150) + 1 + w / 5000
     elif cfg.utility_function == 'crra':
-        gamma = 0.8
+        gamma = 0.75
         return lambda w: (w**(1-gamma) - 1) / (1-gamma) if gamma != 1 else np.log(w)
+    elif cfg.utility_function == 'crra_softplus':
+        gamma = 1.5
+        beta = 0.01  # controls softness; smaller = smoother
+        def crra_softplus(w):
+            w_smooth = softplus(w, beta)
+            return (w_smooth**(1 - gamma) - 1) / (1 - gamma) if gamma != 1 else np.log(w_smooth)
+        return crra_softplus
     else:
         raise ValueError(f"Unsupported utility function: {cfg.utility_function}")
 
@@ -190,7 +200,7 @@ def plot_utility_function(cfg: Config):
         x_vals = np.linspace(0, 3000, 500)
     elif cfg.utility_function in ['tanh','tanh_custom']:
         x_vals = np.linspace(0, 5000, 500)  # Wider range to see the tanh curve
-    elif cfg.utility_function == 'crra':
+    elif cfg.utility_function in ['crra','crra_softplus']:
         x_vals = np.linspace(0.01, 3000, 500)  # Start from 0.01 to avoid issues with power function
     else:
         raise ValueError(f"Unsupported utility function: {cfg.utility_function}")
@@ -205,7 +215,7 @@ def plot_utility_function(cfg: Config):
         plt.axvline(cfg.step_threshold, color='grey', linestyle='--', label=f'Threshold ({cfg.step_threshold})')
     elif cfg.utility_function == 'tanh_custom':
         plt.axvline(cfg.initial_wealth, color='grey', linestyle='--', label=f'Initial wealth ({cfg.initial_wealth})')
-    elif cfg.utility_function == 'crra':
+    elif cfg.utility_function in ['crra', 'crra_softplus']:
         plt.axvline(cfg.initial_wealth, color='grey', linestyle='--', label=f'Initial wealth ({cfg.initial_wealth})')
 
     plt.xlabel('Wealth')
