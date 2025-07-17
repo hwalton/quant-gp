@@ -4,3 +4,5 @@ venv
 *.npy
 
 !objective_function.png
+
+__pycache__
