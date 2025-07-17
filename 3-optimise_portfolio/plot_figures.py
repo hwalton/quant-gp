@@ -2,7 +2,8 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.stats import norm
+from scipy.stats import norm, gaussian_kde
+from scipy import interpolate
 
 from config import Config
 from get_utilty_function import get_utility_func
@@ -210,10 +211,24 @@ def plot_final_wealth_distribution(mu_seq, sigma_seq, current_log_price, optimal
     # Calculate expected wealth
     expected_wealth = np.sum(wealth * probabilities)
     
-    # Create histogram of final wealth
+    # Create weighted samples for KDE
+    # Repeat each wealth value according to its probability (scaled up)
+    sample_weights = (probabilities * 10000).astype(int)  # Scale probabilities to integer weights
+    wealth_samples = np.repeat(wealth, sample_weights)
+    
+    # Use KDE to create smooth PDF
+    if len(wealth_samples) > 0:
+        kde = gaussian_kde(wealth_samples)
+        wealth_range = np.linspace(wealth.min(), wealth.max(), 1000)
+        pdf_values = kde(wealth_range)
+    else:
+        # Fallback if no samples
+        wealth_range = np.linspace(wealth.min(), wealth.max(), 1000)
+        pdf_values = np.zeros_like(wealth_range)
+    
+    # Create smooth PDF plot
     plt.figure(figsize=(10, 6))
-    plt.hist(wealth, bins=50, weights=probabilities, alpha=0.7, density=True, 
-             color='skyblue', edgecolor='black', label='Final Wealth Distribution')
+    plt.plot(wealth_range, pdf_values, label='Final Wealth PDF', linewidth=2, color='skyblue')
     plt.axvline(cfg.initial_wealth, color='r', linestyle='--', 
                 label=f'Initial Wealth: ${cfg.initial_wealth:.0f}', linewidth=2)
     plt.axvline(expected_wealth, color='orange', linestyle=':', 
@@ -307,10 +322,24 @@ def plot_final_utility_distribution(mu_seq, sigma_seq, current_log_price, optima
     expected_utility_val = np.sum(utilities * probabilities)
     initial_utility = utility(cfg.initial_wealth)
     
-    # Create histogram of final utilities
+    # Create weighted samples for KDE
+    # Repeat each utility value according to its probability (scaled up)
+    sample_weights = (probabilities * 10000).astype(int)  # Scale probabilities to integer weights
+    utility_samples = np.repeat(utilities, sample_weights)
+    
+    # Use KDE to create smooth PDF
+    if len(utility_samples) > 0:
+        kde = gaussian_kde(utility_samples)
+        utility_range = np.linspace(utilities.min(), utilities.max(), 1000)
+        pdf_values = kde(utility_range)
+    else:
+        # Fallback if no samples
+        utility_range = np.linspace(utilities.min(), utilities.max(), 1000)
+        pdf_values = np.zeros_like(utility_range)
+    
+    # Create smooth PDF plot
     plt.figure(figsize=(10, 6))
-    plt.hist(utilities, bins=50, weights=probabilities, alpha=0.7, density=True, 
-             color='purple', edgecolor='black', label='Final Utility Distribution')
+    plt.plot(utility_range, pdf_values, label='Final Utility PDF', linewidth=2, color='purple')
     plt.axvline(initial_utility, color='r', linestyle='--', 
                 label=f'Initial Utility: {initial_utility:.3f}', linewidth=2)
     plt.axvline(expected_utility_val, color='orange', linestyle=':', 
