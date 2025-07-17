@@ -16,10 +16,11 @@ class Config:
     ystd_pkl: str = '../2-gp_fit/y_std.npy'
     log_csv: str = '../0-data/btc_weekly_prices.csv'
     initial_wealth: float = 1000
-    utility_function: str = ['step', 'smooth_step', 'sigmoid', 'tanh', 'tanh_custom', 'identity', 'linear', 'log', 'sqrt', 'crra'][4]  # Use smooth_step
+    utility_function: str = ['step', 'smooth_step', 'sigmoid', 'tanh', 'tanh_custom', 'tanh_custom_horz','identity', 'linear', 'log', 'sqrt', 'crra'][5]  # Use smooth_step
     sigmoid_k: float = 25.0
     w0: float = 0.98
     gamma: float = 1.15 # For CRRA utility function
+    h_factor: float = 0.25  # Horizon shift factor for tanh_custom_horz
     predict_index_offset: int = 10
     y_limit: tuple = (4, 18)
     step_threshold: float = 1001
@@ -59,6 +60,8 @@ def get_utility_func(cfg: Config):
         return lambda w: np.tanh((w - 800) / 20)
     elif cfg.utility_function == 'tanh_custom':
         return lambda w: np.tanh((w - 700) / 150) + 1 + w / 5000
+    elif cfg.utility_function == 'tanh_custom_horz':
+        return lambda w: np.tanh((w - 700) / 150) + 1 + w / 5000 + w * cfg.h_factor / cfg.initial_wealth
     elif cfg.utility_function == 'crra':
         return lambda w: (w**(1-cfg.gamma) - 1) / (1-cfg.gamma) if cfg.gamma != 1 else np.log(w)
     else:
@@ -169,7 +172,7 @@ def plot_utility_function(cfg: Config):
         x_vals = np.linspace(0, 3000, 500)
     elif cfg.utility_function in ['step', 'smooth_step']:
         x_vals = np.linspace(0, 3000, 500)
-    elif cfg.utility_function in ['tanh','tanh_custom']:
+    elif cfg.utility_function in ['tanh','tanh_custom', 'tanh_custom_horz']:
         x_vals = np.linspace(0, 5000, 500)  # Wider range to see the tanh curve
     elif cfg.utility_function == 'crra':
         x_vals = np.linspace(0.01, 3000, 500)  # Start from 0.01 to avoid issues with power function
