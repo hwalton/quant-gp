@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 from dataclasses import dataclass
 from scipy.stats import norm
+from itertools import product
 from skopt import gp_minimize
 from skopt.space import Real
 from skopt.utils import use_named_args
@@ -13,14 +14,14 @@ class Config:
     y_std_pkl: str = '../2-gp_fit/y_std.npy'
     log_csv: str = '../0-data/btc_weekly_prices.csv'
     initial_wealth: float = 1000.0
-    utility_function: str = ['step', 'smooth_step', 'sigmoid', 'tanh', 'tanh_custom', 'identity', 'linear', 'log', 'sqrt', 'crra'][9]
+    utility_function: str = ['step', 'smooth_step', 'sigmoid', 'tanh', 'tanh_custom', 'identity', 'linear', 'log', 'sqrt', 'crra'][1]
     gamma: float = 1.5  # Only used if utility_function is 'crra'
     sigmoid_k: float = 25.0
     w0: float = 0.98
-    step_threshold: float = 900
+    step_threshold: float = 1200
     step_steepness: float = 100.0
 
-    horizon_weeks: int = 4
+    horizon_weeks: int = 8
     rebalance_every: int = 4  # weeks
 
 def get_utility_func(cfg: Config):
@@ -125,27 +126,45 @@ def load_gp_predictions(cfg: Config):
 def objective_numerical_integral(p, mu_seq, sigma_seq, current_log_price, cfg):
     utility = get_utility_func(cfg)
 
-    # Grid setup (assumes only one future timepoint, extend later)
-    mu = mu_seq[0]
-    sigma = sigma_seq[0]
-    grid = np.linspace(mu - 4*sigma, mu + 4*sigma, 100)
-    dx = grid[1] - grid[0]
+    T = cfg.horizon_weeks // cfg.rebalance_every
+    assert len(p) == T, f"Expected p of length {T}"
+
+    # Build 1D grids for each future rebalance log-price x_t
+    grid_limits = [
+        np.linspace(mu_seq[t] - 4*sigma_seq[t], mu_seq[t] + 4*sigma_seq[t], 30)
+        for t in range(T)
+    ]
+    dx = [g[1] - g[0] for g in grid_limits]
+
+    # Cartesian product of all grid points: shape (n_points, T)
+    all_paths = list(product(*grid_limits))
 
     total = 0.0
-    for x1 in grid:
-        x0 = current_log_price
-        log_return = x1 - x0
+    for x_path in all_paths:
+        wealth = cfg.initial_wealth
+        x_prev = current_log_price
 
-        current_price = np.exp(x0)
-        future_price = np.exp(x1)
+        for t in range(T):
+            x_now = x_path[t]
+            price_prev = np.exp(x_prev)
+            price_now = np.exp(x_now)
 
-        cash = cfg.initial_wealth * (1 - p[0])
-        btc_units = (cfg.initial_wealth * p[0]) / current_price
-        wealth_T = cash + btc_units * future_price
+            cash = wealth * (1 - p[t])
+            btc = (wealth * p[t]) / price_prev
+            wealth = cash + btc * price_now
 
-        u = utility(wealth_T)
-        pdf = norm.pdf(x1, loc=mu, scale=sigma)
-        total += u * pdf * dx
+            x_prev = x_now  # advance to next step
+
+        u = utility(wealth)
+
+        # Compute joint PDF (assume independence for now)
+        prob_density = np.prod([
+            norm.pdf(x_path[t], loc=mu_seq[t], scale=sigma_seq[t])
+            for t in range(T)
+        ])
+
+        volume_element = np.prod(dx)
+        total += u * prob_density * volume_element
 
     return total
 
@@ -164,7 +183,7 @@ def run_bayesian_optimisation(cfg, mu_seq, sigma_seq, current_log_price, months=
     result = gp_minimize(
         func=objective_wrapped,
         dimensions=search_space,
-        n_calls=50,
+        n_calls=25,
         n_initial_points=10,
         acq_func="EI",  # Expected improvement
         random_state=42,
@@ -178,10 +197,15 @@ def run_bayesian_optimisation(cfg, mu_seq, sigma_seq, current_log_price, months=
 
 def main():
     cfg = Config()
-
-    # Load full weekly forecast for the entire horizon
     mu_seq, sigma_seq, current_log_price = load_gp_predictions(cfg)
-
+    
+    # Debug: Check expected returns by period
+    print(f"Current log price: {current_log_price:.4f}")
+    print(f"GP Predictions by period:")
+    for i in range(len(mu_seq)):
+        expected_return = mu_seq[i] - current_log_price
+        print(f"  Week {i}: μ={mu_seq[i]:.4f}, expected return={expected_return:.4f}")
+    
     # Number of rebalancing points = horizon_weeks / rebalance_every
     T = cfg.horizon_weeks // cfg.rebalance_every
 
