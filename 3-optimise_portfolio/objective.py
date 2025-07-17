@@ -73,56 +73,6 @@ def load_gp_predictions(cfg: Config):
     return mu_seq, sigma_seq, current_log_price
 
 
-# def simulate_terminal_wealth(p, mu_seq, sigma_seq, current_log_price, cfg, n_samples=1000):
-#     T_weeks = cfg.horizon_weeks
-#     rebalance_every = cfg.rebalance_every
-#     T = T_weeks // rebalance_every
-#     assert len(p) == T, f"Expected {T} allocations in p for {T_weeks} weeks of horizon"
-
-#     # Convert GP-predicted log-prices to weekly log-returns
-#     weekly_log_returns = np.random.normal(
-#         loc=mu_seq - current_log_price,
-#         scale=sigma_seq,
-#         size=(n_samples, T_weeks)
-#     )
-
-#     # Initialise log price paths
-#     log_price_paths = np.zeros((n_samples, T_weeks + 1))
-#     log_price_paths[:, 0] = current_log_price
-#     for t in range(T_weeks):
-#         log_price_paths[:, t + 1] = log_price_paths[:, t] + weekly_log_returns[:, t]
-
-#     # Initialise wealth in actual currency (e.g., USD)
-#     wealth = np.full(n_samples, cfg.initial_wealth)
-
-#     for t in range(T):
-#         start_week = t * rebalance_every
-#         end_week = start_week + rebalance_every
-
-#         for i in range(n_samples):
-#             current_price = np.exp(log_price_paths[i, start_week])
-#             future_price = np.exp(log_price_paths[i, end_week])
-
-#             # Rebalance at start_week using current wealth
-#             cash = wealth[i] * (1 - p[t])
-#             btc_units = (wealth[i] * p[t]) / current_price
-
-#             # Wealth at end of period = cash + BTC value
-#             wealth[i] = cash + btc_units * future_price
-
-#     # Debug: Print summary statistics
-#     print(f"Debug: Final wealth stats - Min: {wealth.min():.2f}, Max: {wealth.max():.2f}, Mean: {wealth.mean():.2f}")
-
-#     return wealth
-
-# def objective(p, mu_seq, sigma_seq, current_log_price, cfg, utility=None, n_samples=1000):
-#     if utility is None:
-#         utility = get_utility_func(cfg)
-    
-#     final_wealth = simulate_terminal_wealth(p, mu_seq, sigma_seq, current_log_price, cfg, n_samples=n_samples)
-#     utilities = np.array([utility(w) for w in final_wealth])
-#     return np.mean(utilities)
-
 def objective_numerical_integral(p, mu_seq, sigma_seq, current_log_price, cfg):
     utility = get_utility_func(cfg)
 
