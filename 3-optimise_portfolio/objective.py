@@ -14,11 +14,11 @@ class Config:
     y_std_pkl: str = '../2-gp_fit/y_std.npy'
     log_csv: str = '../0-data/btc_weekly_prices.csv'
     initial_wealth: float = 1000.0
-    utility_function: str = ['step', 'smooth_step', 'sigmoid', 'tanh', 'tanh_custom', 'identity', 'linear', 'log', 'sqrt', 'crra'][1]
+    utility_function: str = ['step', 'smooth_step', 'sigmoid', 'tanh', 'tanh_custom', 'identity', 'linear', 'log', 'sqrt', 'crra'][4]
     gamma: float = 1.5  # Only used if utility_function is 'crra'
     sigmoid_k: float = 25.0
     w0: float = 0.98
-    step_threshold: float = 1200
+    step_threshold: float = 900
     step_steepness: float = 100.0
 
     horizon_weeks: int = 8
@@ -84,37 +84,45 @@ def objective_numerical_integral(p, mu_seq, sigma_seq, current_log_price, cfg):
         np.linspace(mu_seq[t] - 4*sigma_seq[t], mu_seq[t] + 4*sigma_seq[t], 30)
         for t in range(T)
     ]
-    dx = [g[1] - g[0] for g in grid_limits]
+    dx = np.array([g[1] - g[0] for g in grid_limits])
 
-    # Cartesian product of all grid points: shape (n_points, T)
-    all_paths = list(product(*grid_limits))
+    # Create meshgrid for all path combinations
+    grids = np.meshgrid(*grid_limits, indexing='ij')
+    
+    # Stack to get all paths: shape (n_total_paths, T)
+    all_paths = np.stack([g.ravel() for g in grids], axis=1)
+    n_paths = all_paths.shape[0]
 
-    total = 0.0
-    for x_path in all_paths:
-        wealth = cfg.initial_wealth
-        x_prev = current_log_price
+    # Vectorized wealth calculation
+    wealth = np.full(n_paths, cfg.initial_wealth)
+    x_prev = np.full(n_paths, current_log_price)
 
-        for t in range(T):
-            x_now = x_path[t]
-            price_prev = np.exp(x_prev)
-            price_now = np.exp(x_now)
+    for t in range(T):
+        x_now = all_paths[:, t]
+        price_prev = np.exp(x_prev)
+        price_now = np.exp(x_now)
 
-            cash = wealth * (1 - p[t])
-            btc = (wealth * p[t]) / price_prev
-            wealth = cash + btc * price_now
+        cash = wealth * (1 - p[t])
+        btc = (wealth * p[t]) / price_prev
+        wealth = cash + btc * price_now
 
-            x_prev = x_now  # advance to next step
+        x_prev = x_now
 
-        u = utility(wealth)
+    # Vectorized utility calculation
+    utilities = np.array([utility(w) for w in wealth])
 
-        # Compute joint PDF (assume independence for now)
-        prob_density = np.prod([
-            norm.pdf(x_path[t], loc=mu_seq[t], scale=sigma_seq[t])
-            for t in range(T)
-        ])
+    # Vectorized probability density calculation
+    log_probs = np.zeros(n_paths)
+    for t in range(T):
+        log_probs += norm.logpdf(all_paths[:, t], loc=mu_seq[t], scale=sigma_seq[t])
+    
+    prob_densities = np.exp(log_probs)
 
-        volume_element = np.prod(dx)
-        total += u * prob_density * volume_element
+    # Volume element (same for all paths)
+    volume_element = np.prod(dx)
+
+    # Final integration
+    total = np.sum(utilities * prob_densities * volume_element)
 
     return total
 
