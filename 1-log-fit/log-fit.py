@@ -9,15 +9,16 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class Config:
-    data_path: str = '../0-data/btc_weekly_prices.csv'
+    data_path: str = '../0-data/bitcoin_combined_weekly_data.csv'
     output_pkl: str = 'log_trend_params.pkl'
     cycle_length: int = 208
 
 def load_data(cfg: Config):
-    df = pd.read_csv(cfg.data_path, sep=';')
-    df['timestamp'] = pd.to_datetime(df['timestamp'])
+    df = pd.read_csv(cfg.data_path, sep=',')
+    print("Columns:", df.columns.tolist())
+    df['timestamp'] = pd.to_datetime(df['timestamp'], unit='s')
     df = df.sort_values(by='timestamp')
-    y_all = np.log(df['close'].astype(float).values)
+    y_all = np.log(df['price'].astype(float).values)
     
     # Use all data instead of trimming to cycles
     y = y_all

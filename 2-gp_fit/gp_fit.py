@@ -11,7 +11,7 @@ from sklearn.gaussian_process.kernels import RBF, ConstantKernel as C, WhiteKern
 
 @dataclass(frozen=True)
 class Config:
-    data_path: str ='../0-data/btc_weekly_prices.csv'
+    data_path: str ='../0-data/bitcoin_combined_weekly_data.csv'
     log_pkl_path: str ='../1-log-fit/log_trend_params.pkl'
     gp_pkl_path: str ='gp_model.pkl'
     x_pred_pkl: str ='X_pred.npy'
@@ -22,11 +22,16 @@ class Config:
     y_limit: tuple =(4, 18)
 
 def load_data(cfg: Config):
-    df = pd.read_csv(cfg.data_path, sep=';')
-    df['timestamp'] = pd.to_datetime(df['timestamp'])
+    df = pd.read_csv(cfg.data_path, sep=',')
+    print("Columns:", df.columns.tolist())
+    df['timestamp'] = pd.to_datetime(df['timestamp'], unit='s')
     df = df.sort_values(by='timestamp')
-    y = np.log(df['close'].astype(float).values)
-    X = np.arange(len(y)).reshape(-1, 1)
+    y_all = np.log(df['price'].astype(float).values)
+    
+    # Use all data instead of trimming to cycles
+    y = y_all
+    X = np.arange(len(y))
+    
     return X, y
 
 def load_log_trend(cfg: Config):
@@ -52,7 +57,9 @@ def fit_gp(X, residuals, kernel):
         n_restarts_optimizer=3,
         normalize_y=True
     )
-    gp.fit(X, residuals)
+    # Reshape X to 2D array
+    X_reshaped = X.reshape(-1, 1)
+    gp.fit(X_reshaped, residuals)
     
     # Print optimized kernel parameters
     print(f"\nOptimized kernel: {gp.kernel_}")

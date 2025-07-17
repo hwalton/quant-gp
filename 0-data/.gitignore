@@ -1,2 +1,7 @@
-# https://coinmarketcap.com/currencies/bitcoin/historical-data/
+# https://www.kaggle.com/datasets/mczielinski/bitcoin-historical-data - Save this as btcusd_1-min_data.csv
+
+# https://www.kaggle.com/datasets/shiivvvaam/bitcoin-historical-data - Save this as BitcoinHistory.csv
+
 *.csv
+
+
