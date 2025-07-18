@@ -164,7 +164,7 @@ def plot_preference_curve(cfg: Config):
     preference_curve = get_preference_curve(cfg)
     
     # Always use wealth range from 0 to 5000 for preference curves
-    x_vals = np.linspace(100, 5100, 1000)
+    x_vals = np.linspace(0, 5100, 1000)
     y_vals = [preference_curve(w) for w in x_vals]
     
     plt.figure(figsize=(10, 6))
@@ -174,7 +174,6 @@ def plot_preference_curve(cfg: Config):
     # Add reference lines
     plt.axvline(cfg.initial_wealth, color='red', linestyle='--', 
                 label=f'Initial Wealth: ${cfg.initial_wealth:.0f}', linewidth=2)
-    plt.axhline(0.5, color='gray', linestyle=':', alpha=0.5, label='Neutral (0.5)')
     
     # Highlight interesting regions
     if 'step' in cfg.preference_curve:
