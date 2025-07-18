@@ -10,7 +10,7 @@ import time
 
 from config import Config
 from plot_figures import plot_figures, plot_final_distributions, plot_allocation_vs_utility
-from get_utilty_function import get_utility_func
+from get_utility_function import get_utility_func
 
 
 def calculate_grid_parameters(T, max_total_paths=1000000):

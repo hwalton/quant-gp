@@ -61,15 +61,25 @@ def get_preference_curve(cfg: Config):
             return base + height / (1 + np.exp(-steepness * (w - center)))
         return smooth_step
     
-    elif cfg.preference_curve == 'not_below_800':
-        def not_below_800(w):
+    elif cfg.preference_curve == 'not_below_920':
+        def not_below_920(w):
             if w < 920:
                 return -1
             if 920 <= w < 4920:
                 return 1.9 / 4000 * (w - 920) - 1
             else:
                 return 0.9
-        return not_below_800
+        return not_below_920
+
+    elif cfg.preference_curve == 'get_to_4500':
+        def get_to_4500(w):
+            if w < 500:
+                return -0.9
+            if 500 <= w < 4500:
+                return 1.9 / 4000 * (w - 500) - 0.9
+            else:
+                return 1
+    return get_to_4500
 
 def get_utility_func(cfg: Config):
     def utility_func(w):

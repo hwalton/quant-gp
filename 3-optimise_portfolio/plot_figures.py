@@ -6,7 +6,7 @@ from scipy.stats import norm, gaussian_kde
 from scipy import interpolate
 
 from config import Config
-from get_utilty_function import get_utility_func
+from get_utility_function import get_utility_func
 
 def plot_wealth_distribution(mu, sigma, current_log_price, optimal_weight, cfg: Config):
     """Plot wealth distribution after 1 step"""
@@ -159,7 +159,7 @@ def plot_utility_distribution(mu, sigma, current_log_price, optimal_weight, cfg:
 
 def plot_preference_curve(cfg: Config):
     """Plot the preference curve function"""
-    from get_utilty_function import get_preference_curve
+    from get_utility_function import get_preference_curve
     
     preference_curve = get_preference_curve(cfg)
     
@@ -190,7 +190,7 @@ def plot_preference_curve(cfg: Config):
     plt.xlabel('Wealth ($)')
     plt.ylabel('Preference Value')
     plt.title(f'Preference Curve: {cfg.preference_curve.replace("_", " ").title()}')
-    plt.ylim(-1, 1)
+    plt.ylim(-1.1, 1.1)
     plt.xlim(0, 5100)
     
     # Format x-axis as currency
@@ -258,24 +258,65 @@ def plot_final_wealth_distribution(mu_seq, sigma_seq, current_log_price, optimal
     # Calculate expected wealth
     expected_wealth = np.sum(wealth * probabilities)
     
-    # Create weighted samples for KDE
-    # Repeat each wealth value according to its probability (scaled up)
-    sample_weights = (probabilities * 10000).astype(int)  # Scale probabilities to integer weights
-    wealth_samples = np.repeat(wealth, sample_weights)
+    # Create histogram-based PDF using smooth curve through midpoints
+    num_bins = min(50, len(np.unique(wealth)))  # Adaptive number of bins
     
-    # Use KDE to create smooth PDF
-    if len(wealth_samples) > 0:
-        kde = gaussian_kde(wealth_samples)
+    # Calculate weighted histogram
+    hist_counts, bin_edges = np.histogram(wealth, bins=num_bins, weights=probabilities, density=True)
+    
+    # Calculate bin midpoints
+    bin_midpoints = (bin_edges[:-1] + bin_edges[1:]) / 2
+    
+    # Filter out zero-count bins for smoother interpolation
+    non_zero_mask = hist_counts > 0
+    filtered_midpoints = bin_midpoints[non_zero_mask]
+    filtered_counts = hist_counts[non_zero_mask]
+    
+    # Create smooth curve through the midpoints using interpolation
+    if len(filtered_midpoints) > 3:  # Need at least 4 points for cubic interpolation
+        # Use cubic spline interpolation for smooth curve
         wealth_range = np.linspace(wealth.min(), wealth.max(), 1000)
-        pdf_values = kde(wealth_range)
+        
+        # Extend the range slightly for better interpolation at edges
+        interp_func = interpolate.interp1d(
+            filtered_midpoints, filtered_counts, 
+            kind='cubic', bounds_error=False, fill_value=0
+        )
+        pdf_values = interp_func(wealth_range)
+        
+        # Ensure no negative values (can happen with cubic interpolation)
+        pdf_values = np.maximum(pdf_values, 0)
+        
+        # Normalize to ensure it's a proper PDF
+        if np.sum(pdf_values) > 0:
+            pdf_values = pdf_values / np.trapz(pdf_values, wealth_range)
+        
     else:
-        # Fallback if no samples
+        # Fallback to linear interpolation for few points
         wealth_range = np.linspace(wealth.min(), wealth.max(), 1000)
-        pdf_values = np.zeros_like(wealth_range)
+        if len(filtered_midpoints) > 1:
+            interp_func = interpolate.interp1d(
+                filtered_midpoints, filtered_counts, 
+                kind='linear', bounds_error=False, fill_value=0
+            )
+            pdf_values = interp_func(wealth_range)
+        else:
+            # Single point - create a narrow spike
+            pdf_values = np.zeros_like(wealth_range)
+            closest_idx = np.argmin(np.abs(wealth_range - filtered_midpoints[0]))
+            pdf_values[closest_idx] = filtered_counts[0]
     
     # Create smooth PDF plot
     plt.figure(figsize=(10, 6))
-    plt.plot(wealth_range, pdf_values, label='Final Wealth PDF', linewidth=2, color='skyblue')
+    
+    # Plot the smooth curve
+    plt.plot(wealth_range, pdf_values, label='Final Wealth PDF (Smooth)', 
+             linewidth=2, color='skyblue')
+    
+    # Optionally, also show the histogram bars with low alpha
+    plt.bar(bin_midpoints, hist_counts, width=np.diff(bin_edges), 
+            alpha=0.3, color='skyblue', label='Histogram Bins', edgecolor='none')
+    
     plt.axvline(cfg.initial_wealth, color='r', linestyle='--', 
                 label=f'Initial Wealth: ${cfg.initial_wealth:.0f}', linewidth=2)
     plt.axvline(expected_wealth, color='orange', linestyle=':', 
@@ -284,12 +325,17 @@ def plot_final_wealth_distribution(mu_seq, sigma_seq, current_log_price, optimal
     plt.xlabel('Final Wealth ($)')
     plt.ylabel('Probability Density')
     plt.title('Final Wealth Distribution After All Steps')
+    
+    # Format x-axis as currency
+    ax = plt.gca()
+    ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${int(x)}'))
+    
     plt.grid(True, alpha=0.3)
     plt.legend()
     plt.tight_layout()
     
     # Add statistics text
-    plt.text(0.02, 0.98, f'Expected Final Wealth: ${expected_wealth:.2f}\nOptimal Strategy: {np.round(optimal_p, 2)}', 
+    plt.text(0.02, 0.98, f'Expected Final Wealth: ${expected_wealth:.2f}\nOptimal Strategy: {np.round(optimal_p, 2)}\nBins: {num_bins}', 
              transform=plt.gca().transAxes, verticalalignment='top', 
              bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8))
     
@@ -355,24 +401,65 @@ def plot_final_utility_distribution(mu_seq, sigma_seq, current_log_price, optima
     expected_utility_val = np.sum(utilities * probabilities)
     initial_utility = utility(cfg.initial_wealth)
     
-    # Create weighted samples for KDE
-    # Repeat each utility value according to its probability (scaled up)
-    sample_weights = (probabilities * 10000).astype(int)  # Scale probabilities to integer weights
-    utility_samples = np.repeat(utilities, sample_weights)
+    # Create histogram-based PDF using smooth curve through midpoints
+    num_bins = min(50, len(np.unique(utilities)))  # Adaptive number of bins
     
-    # Use KDE to create smooth PDF
-    if len(utility_samples) > 0:
-        kde = gaussian_kde(utility_samples)
+    # Calculate weighted histogram
+    hist_counts, bin_edges = np.histogram(utilities, bins=num_bins, weights=probabilities, density=True)
+    
+    # Calculate bin midpoints
+    bin_midpoints = (bin_edges[:-1] + bin_edges[1:]) / 2
+    
+    # Filter out zero-count bins for smoother interpolation
+    non_zero_mask = hist_counts > 0
+    filtered_midpoints = bin_midpoints[non_zero_mask]
+    filtered_counts = hist_counts[non_zero_mask]
+    
+    # Create smooth curve through the midpoints using interpolation
+    if len(filtered_midpoints) > 3:  # Need at least 4 points for cubic interpolation
+        # Use cubic spline interpolation for smooth curve
         utility_range = np.linspace(utilities.min(), utilities.max(), 1000)
-        pdf_values = kde(utility_range)
+        
+        # Extend the range slightly for better interpolation at edges
+        interp_func = interpolate.interp1d(
+            filtered_midpoints, filtered_counts, 
+            kind='cubic', bounds_error=False, fill_value=0
+        )
+        pdf_values = interp_func(utility_range)
+        
+        # Ensure no negative values (can happen with cubic interpolation)
+        pdf_values = np.maximum(pdf_values, 0)
+        
+        # Normalize to ensure it's a proper PDF
+        if np.sum(pdf_values) > 0:
+            pdf_values = pdf_values / np.trapz(pdf_values, utility_range)
+        
     else:
-        # Fallback if no samples
+        # Fallback to linear interpolation for few points
         utility_range = np.linspace(utilities.min(), utilities.max(), 1000)
-        pdf_values = np.zeros_like(utility_range)
+        if len(filtered_midpoints) > 1:
+            interp_func = interpolate.interp1d(
+                filtered_midpoints, filtered_counts, 
+                kind='linear', bounds_error=False, fill_value=0
+            )
+            pdf_values = interp_func(utility_range)
+        else:
+            # Single point - create a narrow spike
+            pdf_values = np.zeros_like(utility_range)
+            closest_idx = np.argmin(np.abs(utility_range - filtered_midpoints[0]))
+            pdf_values[closest_idx] = filtered_counts[0]
     
     # Create smooth PDF plot
     plt.figure(figsize=(10, 6))
-    plt.plot(utility_range, pdf_values, label='Final Utility PDF', linewidth=2, color='purple')
+    
+    # Plot the smooth curve
+    plt.plot(utility_range, pdf_values, label='Final Utility PDF (Smooth)', 
+             linewidth=2, color='purple')
+    
+    # Optionally, also show the histogram bars with low alpha
+    plt.bar(bin_midpoints, hist_counts, width=np.diff(bin_edges), 
+            alpha=0.3, color='purple', label='Histogram Bins', edgecolor='none')
+    
     plt.axvline(initial_utility, color='r', linestyle='--', 
                 label=f'Initial Utility: {initial_utility:.3f}', linewidth=2)
     plt.axvline(expected_utility_val, color='orange', linestyle=':', 
@@ -386,7 +473,7 @@ def plot_final_utility_distribution(mu_seq, sigma_seq, current_log_price, optima
     plt.tight_layout()
     
     # Add statistics text
-    plt.text(0.02, 0.98, f'Expected Final Utility: {expected_utility_val:.4f}\nOptimal Strategy: {np.round(optimal_p, 2)}', 
+    plt.text(0.02, 0.98, f'Expected Final Utility: {expected_utility_val:.4f}\nOptimal Strategy: {np.round(optimal_p, 2)}\nBins: {num_bins}', 
              transform=plt.gca().transAxes, verticalalignment='top', 
              bbox=dict(boxstyle='round', facecolor='lightcyan', alpha=0.8))
     
