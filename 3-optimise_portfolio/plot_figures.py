@@ -115,46 +115,93 @@ def plot_utility_distribution(mu, sigma, current_log_price, optimal_weight, cfg:
     plt.savefig("utility_distribution.png", dpi=150)
     plt.close()
 
-def plot_utility_function(cfg: Config):
-    """Plot the utility function"""
-    utility = get_utility_func(cfg)
-    if cfg.utility_function == 'log':
-        x_vals = np.linspace(0.01, 3000, 500)
-    elif cfg.utility_function == 'sqrt':
-        x_vals = np.linspace(0, 3000, 500)
-    elif cfg.utility_function in ['sigmoid']:
-        x_vals = np.linspace(cfg.w0 - 1.0, cfg.w0 + 1.0, 500)
-    elif cfg.utility_function in ['identity', 'linear']:
-        x_vals = np.linspace(0, 3000, 500)
-    elif cfg.utility_function in ['step', 'smooth_step']:
-        x_vals = np.linspace(0, 3000, 500)
-    elif cfg.utility_function in ['tanh','tanh_custom']:
-        x_vals = np.linspace(0, 5000, 500)
-    elif cfg.utility_function == 'crra':
-        x_vals = np.linspace(0.01, 3000, 500)
-    else:
-        raise ValueError(f"Unsupported utility function: {cfg.utility_function}")
+# def plot_utility_function(cfg: Config):
+#     """Plot the utility function"""
+#     utility = get_utility_func(cfg)
+#     if cfg.utility_function == 'log':
+#         x_vals = np.linspace(0.01, 3000, 500)
+#     elif cfg.utility_function == 'sqrt':
+#         x_vals = np.linspace(0, 3000, 500)
+#     elif cfg.utility_function in ['sigmoid']:
+#         x_vals = np.linspace(cfg.w0 - 1.0, cfg.w0 + 1.0, 500)
+#     elif cfg.utility_function in ['identity', 'linear']:
+#         x_vals = np.linspace(0, 3000, 500)
+#     elif cfg.utility_function in ['step', 'smooth_step']:
+#         x_vals = np.linspace(0, 3000, 500)
+#     elif cfg.utility_function in ['tanh','tanh_custom']:
+#         x_vals = np.linspace(0, 5000, 500)
+#     elif cfg.utility_function == 'crra':
+#         x_vals = np.linspace(0.01, 3000, 500)
+#     else:
+#         raise ValueError(f"Unsupported utility function: {cfg.utility_function}")
 
-    y_vals = [utility(w) for w in x_vals]
-    plt.figure(figsize=(8, 4))
-    plt.plot(x_vals, y_vals, label=f'{cfg.utility_function.capitalize()} utility', color='blue')
+#     y_vals = [utility(w) for w in x_vals]
+#     plt.figure(figsize=(8, 4))
+#     plt.plot(x_vals, y_vals, label=f'{cfg.utility_function.capitalize()} utility', color='blue')
 
-    if cfg.utility_function in ['sigmoid', 'tanh']:
-        plt.axvline(cfg.initial_wealth, color='grey', linestyle='--', label=f'Initial wealth ({cfg.initial_wealth})')
-    elif cfg.utility_function in ['step', 'smooth_step']:
-        plt.axvline(cfg.step_threshold, color='grey', linestyle='--', label=f'Threshold ({cfg.step_threshold})')
-    elif cfg.utility_function == 'tanh_custom':
-        plt.axvline(cfg.initial_wealth, color='grey', linestyle='--', label=f'Initial wealth ({cfg.initial_wealth})')
-    elif cfg.utility_function == 'crra':
-        plt.axvline(cfg.initial_wealth, color='grey', linestyle='--', label=f'Initial wealth ({cfg.initial_wealth})')
+#     if cfg.utility_function in ['sigmoid', 'tanh']:
+#         plt.axvline(cfg.initial_wealth, color='grey', linestyle='--', label=f'Initial wealth ({cfg.initial_wealth})')
+#     elif cfg.utility_function in ['step', 'smooth_step']:
+#         plt.axvline(cfg.step_threshold, color='grey', linestyle='--', label=f'Threshold ({cfg.step_threshold})')
+#     elif cfg.utility_function == 'tanh_custom':
+#         plt.axvline(cfg.initial_wealth, color='grey', linestyle='--', label=f'Initial wealth ({cfg.initial_wealth})')
+#     elif cfg.utility_function == 'crra':
+#         plt.axvline(cfg.initial_wealth, color='grey', linestyle='--', label=f'Initial wealth ({cfg.initial_wealth})')
 
-    plt.xlabel('Wealth')
-    plt.ylabel('Utility')
-    plt.title('Utility Function')
-    plt.grid(True)
+#     plt.xlabel('Wealth')
+#     plt.ylabel('Utility')
+#     plt.title('Utility Function')
+#     plt.grid(True)
+#     plt.legend()
+#     plt.tight_layout()
+#     plt.savefig("utility_func.png")
+#     plt.close()
+
+def plot_preference_curve(cfg: Config):
+    """Plot the preference curve function"""
+    from get_utilty_function import get_preference_curve
+    
+    preference_curve = get_preference_curve(cfg)
+    
+    # Always use wealth range from 0 to 5000 for preference curves
+    x_vals = np.linspace(0, 5000, 1000)
+    y_vals = [preference_curve(w) for w in x_vals]
+    
+    plt.figure(figsize=(10, 6))
+    plt.plot(x_vals, y_vals, label=f'{cfg.preference_curve.replace("_", " ").title()} Preference', 
+             color='blue', linewidth=2)
+    
+    # Add reference lines
+    plt.axvline(cfg.initial_wealth, color='red', linestyle='--', 
+                label=f'Initial Wealth: ${cfg.initial_wealth:.0f}', linewidth=2)
+    plt.axhline(0.5, color='gray', linestyle=':', alpha=0.5, label='Neutral (0.5)')
+    
+    # Highlight interesting regions
+    if 'step' in cfg.preference_curve:
+        plt.axvline(1000, color='orange', linestyle=':', 
+                    label='Step Threshold: $1000', alpha=0.7)
+    elif cfg.preference_curve == 'target_seeking':
+        plt.axvline(2500, color='green', linestyle=':', 
+                    label='Target: $2500', alpha=0.7)
+    elif cfg.preference_curve == 'fast_climb_drop':
+        plt.axvline(2000, color='purple', linestyle=':', 
+                    label='Peak: $2000', alpha=0.7)
+    
+    plt.xlabel('Wealth ($)')
+    plt.ylabel('Preference Value')
+    plt.title(f'Preference Curve: {cfg.preference_curve.replace("_", " ").title()}')
+    plt.ylim(0, 1)
+    plt.xlim(0, 5000)
+    
+    # Format x-axis as currency
+    ax = plt.gca()
+    ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${int(x)}'))
+    
+    plt.grid(True, alpha=0.3)
     plt.legend()
     plt.tight_layout()
-    plt.savefig("utility_func.png")
+
+    plt.savefig("preference_curve.png", dpi=150)
     plt.close()
 
 def plot_final_wealth_distribution(mu_seq, sigma_seq, current_log_price, optimal_p, cfg: Config):
@@ -292,22 +339,8 @@ def plot_final_utility_distribution(mu_seq, sigma_seq, current_log_price, optima
         
         x_prev = x_now
     
-    # Calculate utilities
-    if cfg.utility_function in ['log', 'sqrt', 'identity', 'linear', 'crra']:
-        if cfg.utility_function == 'log':
-            utilities = np.log(np.maximum(wealth, 1e-10))
-        elif cfg.utility_function == 'sqrt':
-            utilities = np.sqrt(np.maximum(wealth, 0))
-        elif cfg.utility_function in ['identity', 'linear']:
-            utilities = wealth
-        elif cfg.utility_function == 'crra':
-            gamma = cfg.gamma
-            if gamma == 1.0:
-                utilities = np.log(np.maximum(wealth, 1e-10))
-            else:
-                utilities = (np.maximum(wealth, 1e-10)**(1-gamma) - 1) / (1-gamma)
-    else:
-        utilities = np.array([utility(w) for w in wealth])
+
+    utilities = np.array([utility(w) for w in wealth])
     
     # Calculate probabilities for each path
     mu_array = np.array([mu_seq[t] for t in range(T)])
@@ -420,8 +453,8 @@ def plot_figures(mu, sigma, current_log_price, optimal_weight, cfg: Config):
     plot_utility_distribution(mu, sigma, current_log_price, optimal_weight, cfg)
     print("Saved utility_distribution.png")
     
-    plot_utility_function(cfg)
-    print("Saved utility_func.png")
+    plot_preference_curve(cfg)
+    print("Saved preference_curve.png")
     
     # Remove this line - we call it separately in main() with multi-step parameters
     # plot_allocation_vs_utility(mu, sigma, current_log_price, optimal_weight, cfg)
