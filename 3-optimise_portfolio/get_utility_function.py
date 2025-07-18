@@ -173,17 +173,17 @@ def get_preference_curve(cfg: Config):
     elif cfg.preference_curve == 'power_risk_averse':
         def power_risk_averse(w):
             # Power utility: w^(1-γ) where γ controls risk aversion
-            gamma = getattr(cfg, 'risk_aversion', 4)  # 0=risk neutral, 1=log, >1=very risk averse
+            gamma = getattr(cfg, 'risk_aversion', 1)  # 1: risk tolerant, 5: risk averse
             
-            w_min = getattr(cfg, 'power_w_min', 100)
+            w_min = getattr(cfg, 'power_w_min', 10)
             w_max = getattr(cfg, 'power_w_max', 10000)
             
             if w <= 0:
-                return -0.9
-            elif w <= w_min:
-                return -0.9
-            elif w >= w_max:
-                return 0.9
+                return -1
+            # elif w <= w_min:
+            #     return -1e5
+            # elif w >= w_max:
+            #     return 0.9
             else:
                 if gamma == 1.0:
                     # Log utility case
@@ -198,7 +198,7 @@ def get_preference_curve(cfg: Config):
                 
                 # Normalize and map to [-0.9, 0.9]
                 normalized = (utility_val - utility_min) / (utility_max - utility_min)
-                return -0.9 + 1.8 * normalized
+                return np.tanh(-0.9 + 1.8 * normalized)
         
         return power_risk_averse
     
