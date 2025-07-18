@@ -8,14 +8,14 @@ class Config:
     price_csv: str = '../0-data/bitcoin_combined_weekly_data.csv'
     initial_wealth: float = 1000.0
     # utility_function: str = ['step', 'smooth_step', 'sigmoid', 'tanh', 'tanh_custom', 'identity', 'linear', 'log', 'sqrt', 'crra'][4]
-    preference_curve: str = ['step_below_1000', 'step_above_1000', 'smooth_step', 'fast_climb_drop', 'risk_averse', 'loss_averse', 'target_seeking'][0]
+    preference_curve: str = ['step_below_1000', 'step_above_1000', 'smooth_step', 'not_below_800'][3]
     gamma: float = 1.5  # Only used if utility_function is 'crra'
     sigmoid_k: float = 25.0
     w0: float = 0.98
     step_threshold: float = 1100
     step_steepness: float = 100.0
 
-    horizon_weeks: int = 4*2
+    horizon_weeks: int = 4
     rebalance_every: int = 4  # weeks
 
     optimisation_method = ['bayesian', 'bayesian_with_refinement'][1]

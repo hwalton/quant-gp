@@ -36,21 +36,19 @@ import numpy as np
 
 def get_preference_curve(cfg: Config):
     if cfg.preference_curve == 'step_below_1000':
-        # Sharp drop below 1000, constant above
         def step_below(w):
-            if w < 1000:
+            if w < 950:
                 return 0.1
             else:
                 return 0.9
         return step_below
     
     elif cfg.preference_curve == 'step_above_1000':
-        # Constant below 1000, sharp rise above
         def step_above(w):
-            if w < 1000:
-                return 0.3
+            if w < 1050:
+                return 0.1
             else:
-                return 0.95
+                return 0.9
         return step_above
     
     elif cfg.preference_curve == 'smooth_step':
@@ -63,70 +61,32 @@ def get_preference_curve(cfg: Config):
             return base + height / (1 + np.exp(-steepness * (w - center)))
         return smooth_step
     
-    elif cfg.preference_curve == 'fast_climb_drop':
-        # Fast climb from 0 to 2000, then fast drop but never touching 0
-        def fast_climb_drop(w):
-            if w <= 0:
-                return 0.05
-            elif w <= 2000:
-                # Fast rise to peak at 2000
-                return 0.05 + 0.9 * (1 - np.exp(-w / 500))
+    elif cfg.preference_curve == 'not_below_800':
+        def not_below_800(w):
+            if w < 920:
+                return -1
+            if 920 <= w < 4920:
+                return 1.9 / 4000 * (w - 920) - 1
             else:
-                # Fast exponential decay but bounded above 0.1
-                decay = 0.95 * np.exp(-(w - 2000) / 800)
-                return max(0.1, decay)
-        return fast_climb_drop
-    
-    elif cfg.preference_curve == 'risk_averse':
-        # Steep rise up to 1500, then very slow growth (risk averse)
-        def risk_averse(w):
-            if w <= 0:
-                return 0.01
-            elif w <= 1500:
-                # Steep concave rise
-                return 0.01 + 0.85 * (1 - np.exp(-w / 400))
-            else:
-                # Very slow logarithmic growth
-                return 0.86 + 0.13 * np.log(w / 1500) / 10
-        return np.vectorize(risk_averse)
-    
-    elif cfg.preference_curve == 'loss_averse':
-        # Very sensitive to losses below 1000, moderate gains above
-        def loss_averse(w):
-            if w <= 0:
-                return 0.001
-            elif w < 1000:
-                # Steep punishment for losses
-                loss_ratio = w / 1000
-                return 0.001 + 0.499 * loss_ratio**3  # Cubic penalty
-            else:
-                # Moderate square root growth for gains
-                gain_ratio = (w - 1000) / 4000  # Normalize to [0,1] for w in [1000, 5000]
-                return 0.5 + 0.49 * np.sqrt(min(1.0, gain_ratio))
-        return loss_averse
-    
-    elif cfg.preference_curve == 'target_seeking':
-        # Peaks at target wealth (2500), drops on both sides
-        def target_seeking(w):
-            if w <= 0:
-                return 0.1
-            else:
-                target = 2500
-                spread = 1500
-                # Gaussian-like curve centered at target
-                distance = abs(w - target)
-                peak_value = 0.95
-                base_value = 0.15
-                return base_value + (peak_value - base_value) * np.exp(-(distance / spread)**2)
-        return target_seeking
-    
-    else:
-        # Default: simple sigmoid
-        def default_sigmoid(w):
-            return 0.1 + 0.8 / (1 + np.exp(-0.005 * (w - 1000)))
-        return default_sigmoid
+                return 0.9
+        return not_below_800
+
 
     
 def get_utility_func(cfg: Config):
-    preference_curve = get_preference_curve(cfg)
-    return lambda w: np.arctanh(preference_curve(w)*0.99999999999)
+    def utility_func(w):
+        preference_curve = get_preference_curve(cfg)
+        numerically_stable_inf = 1e5
+        if preference_curve(w) <= -1:
+            return -numerically_stable_inf
+        elif -1 < preference_curve(w) < 1:
+            return np.arctanh(preference_curve(w))
+        elif preference_curve(w) >= 1:
+            return numerically_stable_inf
+        else:
+            raise ValueError(f"Invalid wealth value: {w}")
+    return utility_func
+
+# def get_utility_func(cfg: Config):
+#     preference_curve = get_preference_curve(cfg)
+#     return lambda w: (3*preference_curve(w))**5 + 3*preference_curve(w)

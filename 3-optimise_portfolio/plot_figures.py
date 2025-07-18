@@ -164,7 +164,7 @@ def plot_preference_curve(cfg: Config):
     preference_curve = get_preference_curve(cfg)
     
     # Always use wealth range from 0 to 5000 for preference curves
-    x_vals = np.linspace(0, 5000, 1000)
+    x_vals = np.linspace(100, 5100, 1000)
     y_vals = [preference_curve(w) for w in x_vals]
     
     plt.figure(figsize=(10, 6))
@@ -190,8 +190,8 @@ def plot_preference_curve(cfg: Config):
     plt.xlabel('Wealth ($)')
     plt.ylabel('Preference Value')
     plt.title(f'Preference Curve: {cfg.preference_curve.replace("_", " ").title()}')
-    plt.ylim(0, 1)
-    plt.xlim(0, 5000)
+    plt.ylim(-1, 1)
+    plt.xlim(0, 5100)
     
     # Format x-axis as currency
     ax = plt.gca()
@@ -339,7 +339,7 @@ def plot_final_utility_distribution(mu_seq, sigma_seq, current_log_price, optima
         
         x_prev = x_now
     
-
+    # Calculate utilities using the preference curve approach
     utilities = np.array([utility(w) for w in wealth])
     
     # Calculate probabilities for each path
@@ -380,7 +380,7 @@ def plot_final_utility_distribution(mu_seq, sigma_seq, current_log_price, optima
     
     plt.xlabel('Final Utility Value')
     plt.ylabel('Probability Density')
-    plt.title('Final Utility Distribution After All Steps')
+    plt.title(f'Final Utility Distribution After All Steps ({cfg.preference_curve.replace("_", " ").title()})')
     plt.grid(True, alpha=0.3)
     plt.legend()
     plt.tight_layout()
@@ -398,7 +398,7 @@ def plot_allocation_vs_utility(mu_seq, sigma_seq, current_log_price, optimal_p, 
     T = len(optimal_p)
     
     # Range of BTC allocations from 0% to 100% for FIRST step only
-    allocation_range = np.linspace(0, 1, 17)  # 101 points from 0% to 100%
+    allocation_range = np.linspace(0, 1, 21)  # 101 points from 0% to 100%
     expected_utilities = []
     
     print(f"Calculating allocation vs utility plot with {len(allocation_range)} points...")
