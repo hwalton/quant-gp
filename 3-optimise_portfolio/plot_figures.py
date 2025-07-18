@@ -365,13 +365,13 @@ def plot_allocation_vs_utility(mu_seq, sigma_seq, current_log_price, optimal_p, 
     T = len(optimal_p)
     
     # Range of BTC allocations from 0% to 100% for FIRST step only
-    allocation_range = np.linspace(0, 1, 21)  # 101 points from 0% to 100%
+    allocation_range = np.linspace(0, 1, 17)  # 101 points from 0% to 100%
     expected_utilities = []
     
     print(f"Calculating allocation vs utility plot with {len(allocation_range)} points...")
     
     for i, first_allocation in enumerate(allocation_range):
-        if i % 20 == 0:  # Progress indicator every 20 points
+        if i % 16 == 0:
             print(f"  Processing allocation {i+1}/{len(allocation_range)}: {first_allocation:.1%}")
         
         # Create allocation vector: vary first, keep rest optimal
@@ -396,13 +396,13 @@ def plot_allocation_vs_utility(mu_seq, sigma_seq, current_log_price, optimal_p, 
     
     plt.xlabel('First Step BTC Allocation (%)')
     plt.ylabel('Expected Utility')
-    plt.title('Expected Utility vs First Step BTC Allocation (Multi-Step)')
+    plt.title('Final Expected Utility vs First Step BTC Allocation (Multi-Step)')
     plt.grid(True, alpha=0.3)
     plt.legend()
     plt.tight_layout()
     
     # Add statistics text
-    plt.text(0.02, 0.98, f'Maximum Expected Utility: {np.max(expected_utilities):.4f}\nOptimal First Allocation: {optimal_p[0]:.1%}\nFuture Allocations: {np.round(optimal_p[1:], 2)}', 
+    plt.text(0.02, 0.98, f'Maximum Final Expected Utility: {np.max(expected_utilities):.4f}\nOptimal First Allocation: {optimal_p[0]:.1%}\nOptimal Strategy: {np.round(optimal_p, 2)}', 
              transform=plt.gca().transAxes, verticalalignment='top', 
              bbox=dict(boxstyle='round', facecolor='lightgreen', alpha=0.8))
     
