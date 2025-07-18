@@ -309,13 +309,9 @@ def plot_final_wealth_distribution(mu_seq, sigma_seq, current_log_price, optimal
     # Create smooth PDF plot
     plt.figure(figsize=(10, 6))
     
-    # Plot the smooth curve
-    plt.plot(wealth_range, pdf_values, label='Final Wealth PDF (Smooth)', 
+    # Plot only the smooth curve
+    plt.plot(wealth_range, pdf_values, label='Final Wealth PDF', 
              linewidth=2, color='skyblue')
-    
-    # Optionally, also show the histogram bars with low alpha
-    plt.bar(bin_midpoints, hist_counts, width=np.diff(bin_edges), 
-            alpha=0.3, color='skyblue', label='Histogram Bins', edgecolor='none')
     
     plt.axvline(cfg.initial_wealth, color='r', linestyle='--', 
                 label=f'Initial Wealth: ${cfg.initial_wealth:.0f}', linewidth=2)
@@ -335,7 +331,7 @@ def plot_final_wealth_distribution(mu_seq, sigma_seq, current_log_price, optimal
     plt.tight_layout()
     
     # Add statistics text
-    plt.text(0.02, 0.98, f'Expected Final Wealth: ${expected_wealth:.2f}\nOptimal Strategy: {np.round(optimal_p, 2)}\nBins: {num_bins}', 
+    plt.text(0.02, 0.98, f'Expected Final Wealth: ${expected_wealth:.2f}\nOptimal Strategy: {np.round(optimal_p, 2)}', 
              transform=plt.gca().transAxes, verticalalignment='top', 
              bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8))
     
@@ -452,13 +448,9 @@ def plot_final_utility_distribution(mu_seq, sigma_seq, current_log_price, optima
     # Create smooth PDF plot
     plt.figure(figsize=(10, 6))
     
-    # Plot the smooth curve
-    plt.plot(utility_range, pdf_values, label='Final Utility PDF (Smooth)', 
+    # Plot only the smooth curve
+    plt.plot(utility_range, pdf_values, label='Final Utility PDF', 
              linewidth=2, color='purple')
-    
-    # Optionally, also show the histogram bars with low alpha
-    plt.bar(bin_midpoints, hist_counts, width=np.diff(bin_edges), 
-            alpha=0.3, color='purple', label='Histogram Bins', edgecolor='none')
     
     plt.axvline(initial_utility, color='r', linestyle='--', 
                 label=f'Initial Utility: {initial_utility:.3f}', linewidth=2)
@@ -473,7 +465,7 @@ def plot_final_utility_distribution(mu_seq, sigma_seq, current_log_price, optima
     plt.tight_layout()
     
     # Add statistics text
-    plt.text(0.02, 0.98, f'Expected Final Utility: {expected_utility_val:.4f}\nOptimal Strategy: {np.round(optimal_p, 2)}\nBins: {num_bins}', 
+    plt.text(0.02, 0.98, f'Expected Final Utility: {expected_utility_val:.4f}\nOptimal Strategy: {np.round(optimal_p, 2)}', 
              transform=plt.gca().transAxes, verticalalignment='top', 
              bbox=dict(boxstyle='round', facecolor='lightcyan', alpha=0.8))
     
