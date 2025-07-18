@@ -38,47 +38,35 @@ def get_preference_curve(cfg: Config):
     if cfg.preference_curve == 'step_below_1000':
         def step_below(w):
             if w < 950:
-                return 0.1
+                return 0
             else:
-                return 0.9
+                return 0.5
         return step_below
     
     elif cfg.preference_curve == 'step_above_1000':
         def step_above(w):
             if w < 1050:
-                return 0.1
+                return 0
             else:
-                return 0.9
+                return 0.5
         return step_above
-    
-    elif cfg.preference_curve == 'smooth_step':
-        # Smooth S-curve transition around 1000
-        def smooth_step(w):
-            steepness = 0.01  # Controls transition sharpness
-            center = 1000
-            base = 0.2
-            height = 0.7
-            return base + height / (1 + np.exp(-steepness * (w - center)))
-        return smooth_step
     
     elif cfg.preference_curve == 'not_below_920':
         def not_below_920(w):
             if w < 920:
-                return -1
+                return 0
             if 920 <= w < 4920:
-                return 1.9 / 4000 * (w - 920) - 1
-            else:
-                return 0.9
+                return 0.9 / 4000 * (w - 920)
         return not_below_920
 
     elif cfg.preference_curve == 'get_to_4500':
         def get_to_4500(w):
-            if w < 500:
-                return -0.9
-            if 500 <= w < 4500:
-                return 1.9 / 4000 * (w - 500) - 0.9
+            if w < 900:
+                return 0
+            if 900 <= w < 4900:
+                return 0.9 / 4000 * (w - 900)
             else:
-                return 1
+                return 0.9
         return get_to_4500
             
     elif cfg.preference_curve == 'v_shape':
@@ -86,19 +74,19 @@ def get_preference_curve(cfg: Config):
             if w < 1000:
                 return 0.8
             elif 1000 <= w < 2000:
-                return 0.8 -1.8 / 1000 * (w-1000)
-            # elif 1000 <= w < 2000:
-            #     return -1
+                return 0.8 -0.8 / 1000 * (w-1000)
+            elif 1000 <= w < 2000:
+                return 0
             elif 2000 <= w < 3000:
-                return -1 + 1.8 / 1000 * (w - 2000)
+                return 0.8 / 1000 * (w - 2000)
             else:
                 return 0.8
         return v_shape
        
     elif cfg.preference_curve == 'risk_averse':
-        gamma = cfg.gamma/10000
+        gamma = cfg.gamma
         def risk_averse(w):
-            return 0.9-(1/(gamma * (w **3 + 1/(gamma*(1+0.80)))))
+            return ((w/1000+1)**(1-gamma) - 1) / (1-gamma) if gamma != 1 else np.log(w)
         return risk_averse
     
 def get_utility_func(cfg: Config):

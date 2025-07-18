@@ -189,7 +189,6 @@ def plot_preference_curve(cfg: Config):
     plt.xlabel('Wealth ($)')
     plt.ylabel('Preference Value')
     plt.title(f'Preference Curve: {cfg.preference_curve.replace("_", " ").title()}')
-    plt.ylim(-1.1, 1.1)
     plt.xlim(0, 5100)
     
     # Format x-axis as currency
