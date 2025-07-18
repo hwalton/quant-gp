@@ -71,8 +71,6 @@ def get_preference_curve(cfg: Config):
                 return 0.9
         return not_below_800
 
-
-    
 def get_utility_func(cfg: Config):
     def utility_func(w):
         preference_curve = get_preference_curve(cfg)
