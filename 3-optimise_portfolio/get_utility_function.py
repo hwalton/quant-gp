@@ -105,16 +105,10 @@ def get_utility_func(cfg: Config):
     def utility_func(w):
         preference_curve = get_preference_curve(cfg)
         numerically_stable_inf = 1e5
-        if preference_curve(w) <= -1:
+        if preference_curve(w) == 0:
             return -numerically_stable_inf
-        elif -1 < preference_curve(w) < 1:
-            return np.arctanh(preference_curve(w))
-        elif preference_curve(w) >= 1:
-            return numerically_stable_inf
+        elif preference_curve(w) > 0:
+            return preference_curve(w) - 1 / preference_curve(w)
         else:
             raise ValueError(f"Invalid wealth value: {w}")
     return utility_func
-
-# def get_utility_func(cfg: Config):
-#     preference_curve = get_preference_curve(cfg)
-#     return lambda w: (3*preference_curve(w))**5 + 3*preference_curve(w)
