@@ -88,6 +88,11 @@ def get_preference_curve(cfg: Config):
         def risk_averse(w):
             return ((w/1000+1)**(1-gamma) - 1) / (1-gamma) if gamma != 1 else np.log(w)
         return risk_averse
+
+    elif cfg.preference_curve == 'linear':
+        def linear(w):
+            return w
+        return linear
     
 def get_utility_func(cfg: Config):
     def utility_func(w):
@@ -96,7 +101,7 @@ def get_utility_func(cfg: Config):
         if preference_curve(w) == 0:
             return -numerically_stable_inf
         elif preference_curve(w) > 0:
-            return preference_curve(w) - 1 / preference_curve(w)
+            return preference_curve(w) - 0.01 / preference_curve(w)
         else:
             raise ValueError(f"Invalid wealth value: {w}")
     return utility_func
