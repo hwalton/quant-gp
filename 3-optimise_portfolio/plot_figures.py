@@ -38,7 +38,7 @@ def plot_wealth_distribution(mu, sigma, current_log_price, optimal_weight, cfg: 
     plt.title('Wealth Distribution of Optimal Portfolio After 1 Step')
     
     # Fixed scale: always 0 to 2x initial wealth
-    plt.xlim(0, 2 * cfg.initial_wealth)
+    # plt.xlim(0, 2 * cfg.initial_wealth)
     
     # Fix the x-axis formatting
     ax = plt.gca()
