@@ -483,7 +483,7 @@ def plot_allocation_vs_utility(mu_seq, sigma_seq, current_log_price, optimal_p, 
     print(f"Calculating allocation vs utility plot with {len(allocation_range)} points...")
     
     for i, first_allocation in enumerate(allocation_range):
-        if i % 16 == 0:
+        if i % 20 == 0:
             print(f"  Processing allocation {i+1}/{len(allocation_range)}: {first_allocation:.1%}")
         
         # Create allocation vector: vary first, keep rest optimal

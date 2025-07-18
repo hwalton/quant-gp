@@ -79,7 +79,21 @@ def get_preference_curve(cfg: Config):
                 return 1.9 / 4000 * (w - 500) - 0.9
             else:
                 return 1
-    return get_to_4500
+        return get_to_4500
+            
+    elif cfg.preference_curve == 'v_shape':
+        def v_shape(w):
+            if w < 1000:
+                return 0.8
+            elif 1000 <= w < 2000:
+                return 0.8 -1.8 / 1000 * (w-1000)
+            # elif 1000 <= w < 2000:
+            #     return -1
+            elif 2000 <= w < 3000:
+                return -1 + 1.8 / 1000 * (w - 2000)
+            else:
+                return 0.8
+        return v_shape
 
 def get_utility_func(cfg: Config):
     def utility_func(w):
