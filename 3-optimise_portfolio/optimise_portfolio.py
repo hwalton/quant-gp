@@ -93,8 +93,8 @@ def objective_func(p, mu_seq, sigma_seq, current_log_price, cfg, grid_points_per
         log_wealth += np.log(portfolio_return)
         x_prev = x_now
 
-    # Pass log wealth directly to utility function
-    utilities = np.array([utility(log_w) for log_w in log_wealth])
+    # Pass entire log_wealth array to utility function (vectorized)
+    utilities = utility(log_wealth)
 
     # More efficient probability calculation
     # Pre-compute mu and sigma arrays

@@ -13,16 +13,11 @@ def plot_wealth_distribution(mu, sigma, current_log_price, optimal_weight, cfg: 
     pred_log_price_vals = np.linspace(mu - 5 * sigma, mu + 5 * sigma, 1000)
     pdf_vals = norm.pdf(pred_log_price_vals, loc=mu, scale=sigma)
     
-    # Calculate wealth using the same formula as in expected_utility
-    wealth_vals = []
-    for pred_log_price in pred_log_price_vals:
-        cash_portion = cfg.initial_wealth * (1 - optimal_weight)
-        btc_units = (cfg.initial_wealth * optimal_weight) / np.exp(current_log_price)
-        btc_value = btc_units * np.exp(pred_log_price)
-        portfolio_value = cash_portion + btc_value
-        wealth_vals.append(portfolio_value)
-    
-    wealth_vals = np.array(wealth_vals)
+    # Calculate wealth using vectorized operations
+    cash_portion = cfg.initial_wealth * (1 - optimal_weight)
+    btc_units = (cfg.initial_wealth * optimal_weight) / np.exp(current_log_price)
+    btc_value = btc_units * np.exp(pred_log_price_vals)
+    wealth_vals = cash_portion + btc_value
     
     # Calculate expected wealth
     d_log_price = pred_log_price_vals[1] - pred_log_price_vals[0]
@@ -70,27 +65,21 @@ def plot_utility_distribution(mu, sigma, current_log_price, optimal_weight, cfg:
     
     utility = get_utility_func(cfg)
     
-    # Calculate wealth and utility using the same formula as in expected_utility
-    wealth_vals = []
-    utility_vals = []
-    for pred_log_price in pred_log_price_vals:
-        cash_portion = cfg.initial_wealth * (1 - optimal_weight)
-        btc_units = (cfg.initial_wealth * optimal_weight) / np.exp(current_log_price)
-        btc_value = btc_units * np.exp(pred_log_price)
-        portfolio_value = cash_portion + btc_value
-        
-        wealth_vals.append(portfolio_value)
-        utility_vals.append(utility(portfolio_value))
+    # Calculate wealth using vectorized operations
+    cash_portion = cfg.initial_wealth * (1 - optimal_weight)
+    btc_units = (cfg.initial_wealth * optimal_weight) / np.exp(current_log_price)
+    btc_value = btc_units * np.exp(pred_log_price_vals)
+    wealth_vals = cash_portion + btc_value
     
-    wealth_vals = np.array(wealth_vals)
-    utility_vals = np.array(utility_vals)
+    # Vectorized utility calculation - pass log wealth
+    utility_vals = utility(np.log(wealth_vals))
     
     # Calculate expected utility
     d_log_price = pred_log_price_vals[1] - pred_log_price_vals[0]
     expected_utility_val = np.sum(utility_vals * pdf_vals * d_log_price)
     
     # Initial wealth utility for reference
-    initial_utility = utility(cfg.initial_wealth)
+    initial_utility = utility(np.log(cfg.initial_wealth))
     
     plt.figure(figsize=(10, 6))
     plt.plot(utility_vals, pdf_vals, label='Utility PDF', linewidth=2, color='purple')
@@ -115,48 +104,6 @@ def plot_utility_distribution(mu, sigma, current_log_price, optimal_weight, cfg:
     plt.savefig("utility_distribution.png", dpi=150)
     plt.close()
 
-# def plot_utility_function(cfg: Config):
-#     """Plot the utility function"""
-#     utility = get_utility_func(cfg)
-#     if cfg.utility_function == 'log':
-#         x_vals = np.linspace(0.01, 3000, 500)
-#     elif cfg.utility_function == 'sqrt':
-#         x_vals = np.linspace(0, 3000, 500)
-#     elif cfg.utility_function in ['sigmoid']:
-#         x_vals = np.linspace(cfg.w0 - 1.0, cfg.w0 + 1.0, 500)
-#     elif cfg.utility_function in ['identity', 'linear']:
-#         x_vals = np.linspace(0, 3000, 500)
-#     elif cfg.utility_function in ['step', 'smooth_step']:
-#         x_vals = np.linspace(0, 3000, 500)
-#     elif cfg.utility_function in ['tanh','tanh_custom']:
-#         x_vals = np.linspace(0, 5000, 500)
-#     elif cfg.utility_function == 'crra':
-#         x_vals = np.linspace(0.01, 3000, 500)
-#     else:
-#         raise ValueError(f"Unsupported utility function: {cfg.utility_function}")
-
-#     y_vals = [utility(w) for w in x_vals]
-#     plt.figure(figsize=(8, 4))
-#     plt.plot(x_vals, y_vals, label=f'{cfg.utility_function.capitalize()} utility', color='blue')
-
-#     if cfg.utility_function in ['sigmoid', 'tanh']:
-#         plt.axvline(cfg.initial_wealth, color='grey', linestyle='--', label=f'Initial wealth ({cfg.initial_wealth})')
-#     elif cfg.utility_function in ['step', 'smooth_step']:
-#         plt.axvline(cfg.step_threshold, color='grey', linestyle='--', label=f'Threshold ({cfg.step_threshold})')
-#     elif cfg.utility_function == 'tanh_custom':
-#         plt.axvline(cfg.initial_wealth, color='grey', linestyle='--', label=f'Initial wealth ({cfg.initial_wealth})')
-#     elif cfg.utility_function == 'crra':
-#         plt.axvline(cfg.initial_wealth, color='grey', linestyle='--', label=f'Initial wealth ({cfg.initial_wealth})')
-
-#     plt.xlabel('Wealth')
-#     plt.ylabel('Utility')
-#     plt.title('Utility Function')
-#     plt.grid(True)
-#     plt.legend()
-#     plt.tight_layout()
-#     plt.savefig("utility_func.png")
-#     plt.close()
-
 def plot_preference_curve(cfg: Config):
     """Plot the preference curve function"""
     from get_utility_function import get_preference_curve
@@ -165,7 +112,9 @@ def plot_preference_curve(cfg: Config):
     
     # Always use wealth range from 0 to 5000 for preference curves
     x_vals = np.linspace(np.log(100), np.log(5000), 1000)
-    y_vals = [preference_curve(w) for w in x_vals]
+    
+    # Vectorized preference curve calculation
+    y_vals = preference_curve(x_vals)
     
     plt.figure(figsize=(10, 6))
     plt.plot(x_vals, y_vals, label=f'{cfg.preference_curve.replace("_", " ").title()} Preference', 
@@ -178,7 +127,6 @@ def plot_preference_curve(cfg: Config):
     plt.xlabel('ln(Wealth ($))')
     plt.ylabel('Preference Value')
     plt.title(f'Preference Curve: {cfg.preference_curve.replace("_", " ").title()}')
-    # plt.xlim(np.log10(100),np.log10(5100))
     
     # Format x-axis as currency
     ax = plt.gca()
@@ -216,22 +164,26 @@ def plot_final_wealth_distribution(mu_seq, sigma_seq, current_log_price, optimal
     all_paths = np.stack([g.ravel() for g in grids], axis=1)
     n_paths = all_paths.shape[0]
     
-    # Vectorized wealth calculation (same as objective_numerical_integral)
-    wealth = np.full(n_paths, cfg.initial_wealth)
+    # Vectorized wealth calculation using log wealth approach
+    log_wealth = np.full(n_paths, np.log(cfg.initial_wealth))
     x_prev = np.full(n_paths, current_log_price)
     p_array = np.array(optimal_p)
     
     for t in range(T):
         x_now = all_paths[:, t]
-        price_prev = np.exp(x_prev)
-        price_now = np.exp(x_now)
         
-        p_t = p_array[t]
-        cash = wealth * (1 - p_t)
-        btc = (wealth * p_t) / price_prev
-        wealth = cash + btc * price_now
+        # Calculate log returns
+        log_return = x_now - x_prev
         
+        # Update log wealth using the formula
+        portfolio_return = (1 - p_array[t]) + p_array[t] * np.exp(log_return)
+        portfolio_return = np.maximum(portfolio_return, 1e-10)
+        
+        log_wealth += np.log(portfolio_return)
         x_prev = x_now
+    
+    # Convert back to actual wealth
+    wealth = np.exp(log_wealth)
     
     # Calculate probabilities for each path
     mu_array = np.array([mu_seq[t] for t in range(T)])
@@ -350,25 +302,26 @@ def plot_final_utility_distribution(mu_seq, sigma_seq, current_log_price, optima
     all_paths = np.stack([g.ravel() for g in grids], axis=1)
     n_paths = all_paths.shape[0]
     
-    # Vectorized wealth calculation (same as objective_numerical_integral)
-    wealth = np.full(n_paths, cfg.initial_wealth)
+    # Vectorized wealth calculation using log wealth approach
+    log_wealth = np.full(n_paths, np.log(cfg.initial_wealth))
     x_prev = np.full(n_paths, current_log_price)
     p_array = np.array(optimal_p)
     
     for t in range(T):
         x_now = all_paths[:, t]
-        price_prev = np.exp(x_prev)
-        price_now = np.exp(x_now)
         
-        p_t = p_array[t]
-        cash = wealth * (1 - p_t)
-        btc = (wealth * p_t) / price_prev
-        wealth = cash + btc * price_now
+        # Calculate log returns
+        log_return = x_now - x_prev
         
+        # Update log wealth using the formula
+        portfolio_return = (1 - p_array[t]) + p_array[t] * np.exp(log_return)
+        portfolio_return = np.maximum(portfolio_return, 1e-10)
+        
+        log_wealth += np.log(portfolio_return)
         x_prev = x_now
     
-    # Calculate utilities using the preference curve approach
-    utilities = np.array([utility(w) for w in wealth])
+    # Vectorized utility calculation - pass log wealth directly
+    utilities = utility(log_wealth)
     
     # Calculate probabilities for each path
     mu_array = np.array([mu_seq[t] for t in range(T)])
@@ -381,7 +334,7 @@ def plot_final_utility_distribution(mu_seq, sigma_seq, current_log_price, optima
     
     # Calculate expected utility
     expected_utility_val = np.sum(utilities * probabilities)
-    initial_utility = utility(cfg.initial_wealth)
+    initial_utility = utility(np.log(cfg.initial_wealth))
     
     # Create histogram-based PDF using smooth curve through midpoints
     num_bins = min(50, len(np.unique(utilities)))  # Adaptive number of bins
