@@ -12,7 +12,7 @@ class Config:
     step_threshold: float = 1100
     step_steepness: float = 100.0
 
-    horizon_weeks: int = 4
+    horizon_weeks: int = 4*2
     rebalance_every: int = 4  # weeks
 
     optimisation_method = ['bayesian', 'bayesian_with_refinement'][1]

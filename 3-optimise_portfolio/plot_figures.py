@@ -33,7 +33,7 @@ def plot_preference_curve(cfg: Config):
     # Set log10 scale for x-axis
     plt.xscale('log')
     
-    plt.xlabel('Wealth ($) [Log Scale]', fontsize=18)
+    plt.xlabel('Wealth ($)', fontsize=18)
     plt.ylabel('Preference Value', fontsize=18)
     plt.title(f'Preference Curve: {cfg.preference_curve.replace("_", " ").title()}', fontsize=21)
     
@@ -187,8 +187,8 @@ def plot_final_wealth_distribution(mu_seq, sigma_seq, current_log_price, optimal
     
     plt.xlabel('Wealth ($)', fontsize=18)
     plt.ylabel('Probability Density (×1E-3)', fontsize=18)
-    plt.title('Wealth Distribution At Investment Horizon', fontsize=21)
-    
+    plt.title(f'Wealth Distribution At Investment Horizon: {cfg.horizon_weeks} Weeks', fontsize=21)
+
     # Format x-axis as currency
     ax = plt.gca()
     ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${int(x)}'))
@@ -231,9 +231,12 @@ def plot_final_wealth_distribution(mu_seq, sigma_seq, current_log_price, optimal
     else:
         va = 'bottom'
     
-    plt.text(x_pos, y_pos, f'Optimal Strategy: {np.round(optimal_p, 2)}', 
-             transform=ax.transAxes, verticalalignment=va, horizontalalignment=ha,
-             bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8), fontsize=13.5)
+    plt.text(
+        x_pos, y_pos,
+        f'Optimal Current Proportion BTC: {round(optimal_p[0], 2)}',
+        transform=ax.transAxes, verticalalignment=va, horizontalalignment=ha,
+        bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8), fontsize=13.5
+    )
     
     plt.tight_layout()
     plt.savefig("final_wealth_distribution.png", dpi=150, bbox_inches='tight')
@@ -302,10 +305,13 @@ def plot_allocation_vs_utility(mu_seq, sigma_seq, current_log_price, optimal_p, 
     else:
         x_pos, ha = 0.98, 'right'
     
-    plt.text(x_pos, 0.98, f'Optimal Strategy: {np.round(optimal_p, 2)}', 
-             transform=ax.transAxes, verticalalignment='top', horizontalalignment=ha,
-             bbox=dict(boxstyle='round', facecolor='lightgreen', alpha=0.8), fontsize=13.5)
-    
+    plt.text(
+        x_pos, 0.98,
+        f'Optimal Current Proportion BTC: {round(optimal_p[0], 2)}',
+        transform=ax.transAxes, verticalalignment='top', horizontalalignment=ha,
+        bbox=dict(boxstyle='round', facecolor='lightgreen', alpha=0.8), fontsize=13.5
+    )
+
     plt.tight_layout()
     plt.savefig("allocation_vs_utility.png", dpi=150, bbox_inches='tight')
     plt.close()
