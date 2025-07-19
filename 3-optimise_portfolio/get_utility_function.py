@@ -76,69 +76,18 @@ def _fit_preference_curve(w, points):
     return np.interp(log_w, log_wealth_points, pref_points)
 
 def get_preference_curve(cfg: Config):
-    if cfg.preference_curve == 'step_below_1000':
+    if cfg.preference_curve == 'step':
         def step_below(w):
-            if w < 900:
+            if w < 750:
                 return -1
             else:
                 return 0.9
         return step_below
-    
-    elif cfg.preference_curve == 'step_above_1000':
-        def step_above(w):
-            if w < 1050:
-                return 0
-            else:
-                return 0.5
-        return step_above
-    
-    elif cfg.preference_curve == 'not_below_920':
-        def not_below_920(w):
-            if w < 920:
-                return 0
-            if 920 <= w < 4920:
-                return 0.9 / 4000 * (w - 920)
-        return not_below_920
-
-    elif cfg.preference_curve == 'get_to_4500':
-        def get_to_4500(w):
-            if w < 900:
-                return 0
-            if 900 <= w < 4900:
-                return 0.9 / 4000 * (w - 900)
-            else:
-                return 0.9
-        return get_to_4500
-            
-    elif cfg.preference_curve == 'v_shape':
-        def v_shape(w):
-            if w < 1000:
-                return 0.8
-            elif 1000 <= w < 2000:
-                return 0.8 -0.8 / 1000 * (w-1000)
-            elif 1000 <= w < 2000:
-                return 0
-            elif 2000 <= w < 3000:
-                return 0.8 / 1000 * (w - 2000)
-            else:
-                return 0.8
-        return v_shape
-       
-    elif cfg.preference_curve == 'risk_averse':
-        gamma = cfg.gamma/1000
-        def risk_averse(w):
-            return np.tanh(((w/1000+1)**(1-gamma) - 1) / (1-gamma) if gamma != 1 else np.log(w))
-        return risk_averse
-
-    elif cfg.preference_curve == 'linear':
-        def linear(w):
-            return w
-        return linear
 
     elif cfg.preference_curve == 'coordinate_points':
         def coordinate_points(w):
             # Get coordinate points from config
-            points = getattr(cfg, 'preference_points', [(1000, -1), (1500,0.0), (5000, 0.5)])
+            points = getattr(cfg, 'preference_points', [(100, -0.5), (10000, 0.1)])
             
             return _fit_preference_curve(w, points)
         
@@ -151,7 +100,7 @@ def get_preference_curve(cfg: Config):
             
             # Define wealth range for mapping
             w_min = getattr(cfg, 'log_w_min', 100)    # Minimum meaningful wealth
-            w_max = getattr(cfg, 'log_w_max', 10000)  # Maximum expected wealth
+            w_max = getattr(cfg, 'log_w_max', 1000)  # Maximum expected wealth
             
             if w <= 0:
                 return -0.9  # Very negative preference for zero/negative wealth
@@ -173,10 +122,10 @@ def get_preference_curve(cfg: Config):
         
         return log_risk_averse
     
-    elif cfg.preference_curve == 'power_risk_averse':
-        def power_risk_averse(w):
+    elif cfg.preference_curve == 'general_risk_level':
+        def general_risk_level(w):
             # Power utility: w^(1-γ) where γ controls risk aversion
-            gamma = getattr(cfg, 'risk_aversion', 1)  # 1: risk tolerant, 5: risk averse
+            gamma = getattr(cfg, 'gamma', 5)  # 1: risk tolerant, 5: risk averse
             
             w_min = getattr(cfg, 'power_w_min', 10)
             w_max = getattr(cfg, 'power_w_max', 10000)
@@ -203,7 +152,7 @@ def get_preference_curve(cfg: Config):
                 normalized = (utility_val - utility_min) / (utility_max - utility_min)
                 return np.tanh(-0.9 + 1.8 * normalized)
         
-        return power_risk_averse
+        return general_risk_level
     
 # def get_utility_func(cfg: Config):
 #     def utility_func(w):

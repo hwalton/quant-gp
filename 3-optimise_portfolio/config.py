@@ -7,13 +7,13 @@ class Config:
     y_std_pkl: str = '../2-gp_fit/y_std.npy'
     price_csv: str = '../0-data/bitcoin_combined_weekly_data.csv'
     initial_wealth: float = 1000
-    preference_curve: str = ['step_below_1000', 'step_above_1000', 'not_below_920', 'get_to_4500', 'v_shape', 'risk_averse', 'linear', 'coordinate_points', 'log_risk_averse', 'power_risk_averse'][0]
-    gamma: float = 1  # Only used if utility_function is 'crra'
+    preference_curve: str = ['step', 'coordinate_points', 'log_risk_averse', 'general_risk_level'][3]
+    gamma: float = 5  # Only used if utility_function is 'crra'
     step_threshold: float = 1100
     step_steepness: float = 100.0
 
-    horizon_weeks: int = 4
-    rebalance_every: int = 4  # weeks
+    horizon_weeks: int = 8
+    rebalance_every: int = 8  # weeks
 
     optimisation_method = ['bayesian', 'bayesian_with_refinement'][1]
     

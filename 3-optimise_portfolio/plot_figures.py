@@ -310,7 +310,6 @@ def plot_final_wealth_distribution(mu_seq, sigma_seq, current_log_price, optimal
     # Plot only the smooth curve
     plt.plot(wealth_range, pdf_values, label='Final Wealth PDF', 
              linewidth=2, color='skyblue')
-    print(f"initial wealth_hw: {cfg.initial_wealth}")
     plt.axvline(cfg.initial_wealth, color='r', linestyle='--', 
                 label=f'Initial Wealth: ${cfg.initial_wealth:.0f}', linewidth=2)
     plt.axvline(expected_wealth, color='orange', linestyle=':', 
@@ -519,7 +518,6 @@ def plot_allocation_vs_utility(mu_seq, sigma_seq, current_log_price, optimal_p, 
     plt.savefig("allocation_vs_utility.png", dpi=150)
     plt.close()
     
-    print("hw_debug: utility array: ", expected_utilities)
     print("Completed allocation vs utility plot")
 
 def plot_figures(mu, sigma, current_log_price, optimal_weight, cfg: Config):
