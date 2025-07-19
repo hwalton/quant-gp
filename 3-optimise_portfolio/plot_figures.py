@@ -9,7 +9,7 @@ from config import Config
 from get_utility_function import get_utility_func
 
 def plot_wealth_distribution(mu, sigma, current_log_price, optimal_weight, cfg: Config):
-    """Plot wealth distribution after 1 step with log wealth axis"""
+    """Plot wealth distribution after 1 step"""
     pred_log_price_vals = np.linspace(mu - 5 * sigma, mu + 5 * sigma, 1000)
     pdf_vals = norm.pdf(pred_log_price_vals, loc=mu, scale=sigma)
     
@@ -29,16 +29,26 @@ def plot_wealth_distribution(mu, sigma, current_log_price, optimal_weight, cfg: 
     expected_wealth = np.sum(wealth_vals * pdf_vals * d_log_price)
     
     plt.figure(figsize=(10, 6))
-    plt.semilogx(wealth_vals, pdf_vals, label='Wealth PDF', linewidth=2)
+    plt.plot(wealth_vals, pdf_vals, label='Wealth PDF', linewidth=2)
     plt.axvline(cfg.initial_wealth, color='r', linestyle='--', label='Initial Wealth', linewidth=2)
     plt.axvline(expected_wealth, color='orange', linestyle=':', label=f'Expected Wealth: ${expected_wealth:.0f}', linewidth=2)
     
-    plt.xlabel('Simulated Future Wealth ($) - Log Scale')
+    plt.xlabel('Simulated Future Wealth ($)')
     plt.ylabel('Probability Density')
     plt.title('Wealth Distribution of Optimal Portfolio After 1 Step')
     
-    # Format x-axis as currency with log scale
+    # Fixed scale: always 0 to 2x initial wealth
+    # plt.xlim(0, 2 * cfg.initial_wealth)
+    
+    # Fix the x-axis formatting
     ax = plt.gca()
+    ax.ticklabel_format(style='plain', axis='x')
+    
+    # Set clean tick spacing every $200
+    tick_spacing = 200
+    ax.set_xticks(np.arange(0, 2 * cfg.initial_wealth + tick_spacing, tick_spacing))
+    
+    # Format x-axis labels as integers
     ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${int(x)}'))
     
     plt.grid(True, alpha=0.3)
@@ -106,31 +116,32 @@ def plot_utility_distribution(mu, sigma, current_log_price, optimal_weight, cfg:
     plt.close()
 
 def plot_preference_curve(cfg: Config):
-    """Plot the preference curve function with log wealth axis"""
+    """Plot the preference curve function"""
     from get_utility_function import get_preference_curve
     
     preference_curve = get_preference_curve(cfg)
     
-    # Use log-spaced wealth values from $100 to $10,000 for better log visualization
-    x_vals = np.logspace(np.log10(100), np.log10(10000), 1000)  # Log-spaced from $100 to $10,000
+    # Always use wealth range from 0 to 5000 for preference curves
+    x_vals = np.linspace(np.log(100), np.log(5000), 1000)
     y_vals = [preference_curve(w) for w in x_vals]
     
     plt.figure(figsize=(10, 6))
-    plt.semilogx(x_vals, y_vals, label=f'{cfg.preference_curve.replace("_", " ").title()} Preference', 
-                 color='blue', linewidth=2)
+    plt.plot(x_vals, y_vals, label=f'{cfg.preference_curve.replace("_", " ").title()} Preference', 
+             color='blue', linewidth=2)
     
     # Add reference lines
     plt.axvline(cfg.initial_wealth, color='red', linestyle='--', 
-                label=f'Initial Wealth: ${cfg.initial_wealth:.0f}', linewidth=2)
+                label=f'Initial ln(Wealth): ${cfg.initial_wealth:.0f}', linewidth=2)
+
     
-    plt.xlabel('Wealth ($) - Log Scale')
+    plt.xlabel('ln(Wealth ($))')
     plt.ylabel('Preference Value')
     plt.title(f'Preference Curve: {cfg.preference_curve.replace("_", " ").title()}')
-    plt.xlim(100, 10000)
+    plt.xlim(np.log(100), np.log(5000))
     
     # Format x-axis as currency
     ax = plt.gca()
-    ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${int(x)}'))
+    # ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{int(x)}'))
     
     plt.grid(True, alpha=0.3)
     plt.legend()
@@ -140,7 +151,7 @@ def plot_preference_curve(cfg: Config):
     plt.close()
 
 def plot_final_wealth_distribution(mu_seq, sigma_seq, current_log_price, optimal_p, cfg: Config):
-    """Plot wealth distribution after all optimization steps with log wealth axis"""
+    """Plot wealth distribution after all optimization steps"""
     T = len(optimal_p)
     
     # Use same grid calculation as in objective_numerical_integral
@@ -241,19 +252,19 @@ def plot_final_wealth_distribution(mu_seq, sigma_seq, current_log_price, optimal
             closest_idx = np.argmin(np.abs(wealth_range - filtered_midpoints[0]))
             pdf_values[closest_idx] = filtered_counts[0]
     
-    # Create smooth PDF plot with log scale
+    # Create smooth PDF plot
     plt.figure(figsize=(10, 6))
     
-    # Plot only the smooth curve with log x-axis
-    plt.semilogx(wealth_range, pdf_values, label='Final Wealth PDF', 
-                 linewidth=2, color='skyblue')
+    # Plot only the smooth curve
+    plt.plot(wealth_range, pdf_values, label='Final Wealth PDF', 
+             linewidth=2, color='skyblue')
     
     plt.axvline(cfg.initial_wealth, color='r', linestyle='--', 
                 label=f'Initial Wealth: ${cfg.initial_wealth:.0f}', linewidth=2)
     plt.axvline(expected_wealth, color='orange', linestyle=':', 
                 label=f'Expected Wealth: ${expected_wealth:.0f}', linewidth=2)
     
-    plt.xlabel('Final Wealth ($) - Log Scale')
+    plt.xlabel('Final Wealth ($)')
     plt.ylabel('Probability Density')
     plt.title('Final Wealth Distribution After All Steps')
     

@@ -65,8 +65,8 @@ def objective_func(p, mu_seq, sigma_seq, current_log_price, cfg, grid_points_per
     all_paths = np.stack([g.ravel() for g in grids], axis=1)
     n_paths = all_paths.shape[0]
 
-    # Vectorized wealth calculation
-    wealth = np.full(n_paths, cfg.initial_wealth)
+    # Initialize log_wealth instead of wealth
+    log_wealth = np.full(n_paths, np.log(cfg.initial_wealth))
     x_prev = np.full(n_paths, current_log_price)
 
     # Pre-compute p array for faster indexing
@@ -74,19 +74,34 @@ def objective_func(p, mu_seq, sigma_seq, current_log_price, cfg, grid_points_per
     
     for t in range(T):
         x_now = all_paths[:, t]
-        # Vectorized exponential operations
-        price_prev = np.exp(x_prev)
-        price_now = np.exp(x_now)
-
-        # Vectorized portfolio calculations
+        
+        # Calculate log of portfolio value for each path
+        # Following the formula: log(W_t) = log(W_{t-1}) + log[(1-p_t) + p_t * exp(x_{t+1,R} - x_{t,R})]
         p_t = p_array[t]
-        cash = wealth * (1 - p_t)
-        btc = (wealth * p_t) / price_prev
-        wealth = cash + btc * price_now
-
+        
+        # For each path, calculate the log portfolio return
+        log_portfolio_returns = []
+        for i in range(n_paths):
+            # Portfolio return factor: (1-p_t) + p_t * exp(return)
+            log_return = x_now[i] - x_prev[i]  # x_{t+1,R} - x_{t,R}
+            portfolio_return_factor = (1 - p_t) + p_t * np.exp(log_return)
+            
+            # Add log of this factor to log wealth
+            if portfolio_return_factor <= 0:
+                # Handle edge case - should be very rare with reasonable p_t values
+                log_portfolio_returns.append(-np.inf)
+            else:
+                log_portfolio_returns.append(np.log(portfolio_return_factor))
+        
+        # Update log wealth
+        log_wealth = log_wealth + np.array(log_portfolio_returns)
         x_prev = x_now
 
-    # Use the preference curve utility function for all cases
+    # Convert log_wealth back to wealth for utility calculation
+    # (assuming your utility function still expects wealth, not log_wealth)
+    wealth = np.exp(log_wealth)
+    
+    # Calculate utilities
     utilities = np.array([utility(w) for w in wealth])
 
     # More efficient probability calculation
