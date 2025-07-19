@@ -125,9 +125,9 @@ def plot_results(cfg: Config):
     ax.plot(X, y_actual, 'kx', label='Historical BTC Prices', markersize=5, zorder=1)
     
     # Plot GP mean prediction and confidence band over full range
-    ax.plot(X_pred_display, y_pred_display_actual, 'b-', label='Prediction Mean', linewidth=2, zorder=2)
+    ax.plot(X_pred_display, y_pred_display_actual, 'b-', label='Regression Mean', linewidth=2, zorder=2)
     ax.fill_between(X_pred_display.ravel(), y_std_lower_actual, y_std_upper_actual, 
-                    alpha=0.2, label='Prediction 1σ confidence Interval (68%)', color='skyblue', zorder=2)
+                    alpha=0.2, label='Regression 1σ confidence Interval (68%)', color='skyblue', zorder=2)
     
     # Set log10 scale for y-axis
     ax.set_yscale('log')
