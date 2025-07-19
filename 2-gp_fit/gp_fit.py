@@ -106,40 +106,48 @@ def plot_results(cfg: Config):
     y_pred_display = y_pred[X_pred.ravel() >= X_display[0]]
     y_std_display = y_std[X_pred.ravel() >= X_display[0]]
 
+    # Convert log prices back to actual prices for plotting
+    y_actual = np.exp(y)
+    y_display_actual = np.exp(y_display)
+    y_pred_display_actual = np.exp(y_pred_display)
+    y_std_upper_actual = np.exp(y_pred_display + y_std_display)
+    y_std_lower_actual = np.exp(y_pred_display - y_std_display)
+
     fig, ax = plt.subplots(figsize=(10, 6))
     
     # Plot all observed data points with smaller x's and lower zorder (behind axis)
-    ax.plot(X, y, 'kx', label='Observed BTC prices', markersize=5, zorder=1)
+    ax.plot(X, y_actual, 'kx', label='Observed BTC prices', markersize=5, zorder=1)
     
-    # Plot GP mean prediction, log trend fit, and confidence band over full range
-    ax.plot(X_pred_display, y_pred_display, 'b-', label='Prediction Mean', linewidth=2, zorder=2)
-    # ax.plot(X_pred_display, log_trend(X_pred_display.ravel()), 'g--', label='Log trend fit', linewidth=2, zorder=2)
-    ax.fill_between(X_pred_display.ravel(), y_pred_display - y_std_display, y_pred_display + y_std_display, 
+    # Plot GP mean prediction and confidence band over full range
+    ax.plot(X_pred_display, y_pred_display_actual, 'b-', label='Prediction Mean', linewidth=2, zorder=2)
+    ax.fill_between(X_pred_display.ravel(), y_std_lower_actual, y_std_upper_actual, 
                     alpha=0.2, label='Prediction 1σ confidence Interval (68%)', color='skyblue', zorder=2)
     
+    # Set log10 scale for y-axis
+    ax.set_yscale('log')
+    
     ax.set_xlabel('Weeks since start', fontsize=18)
-    ax.set_ylabel('Log(BTC Price (USD))', fontsize=18)
+    ax.set_ylabel('BTC Price (USD)', fontsize=18)
     ax.set_title('Gaussian Process Regression on BTC Weekly Prices', fontsize=21)
     ax.legend(loc='best', fontsize=15)
-    ax.grid(True, alpha=0.3)
+    ax.grid(True, alpha=0.3, which='both')  # Show both major and minor grid lines
     
     # Set axis limits to only show the final half
     ax.set_xlim(X_display[0], X_pred.ravel()[-1])
     
-    # Calculate dynamic y-limits based on displayed data
-    y_min = min(y_display.min(), (y_pred_display - y_std_display).min())
-    y_max = max(y_display.max(), (y_pred_display + y_std_display).max())
-    y_range = y_max - y_min
-    padding = y_range * 0.1
-    ax.set_ylim(y_min - padding, y_max + padding)
-    
+    # Format y-axis with currency formatting
+    ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, p: f'${int(y):,}'))
     ax.tick_params(axis='both', which='major', labelsize=14)
     
+    # Calculate dynamic y-limits based on displayed data (using actual prices)
+    y_min = min(y_display_actual.min(), y_std_lower_actual.min())
+    y_max = max(y_display_actual.max(), y_std_upper_actual.max())
+    ax.set_ylim(y_min * 0.9, y_max * 1.1)  # Add 10% padding on log scale
+    
     fig.tight_layout()
-    fig.savefig(cfg.plot_path)
+    fig.savefig(cfg.plot_path, dpi=150, bbox_inches='tight')
     plt.close('all')
     print(f"Plot saved to {cfg.plot_path}")
-
 def main():
     cfg = Config()
 
