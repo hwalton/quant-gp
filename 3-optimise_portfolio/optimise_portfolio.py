@@ -1,15 +1,13 @@
 import numpy as np
 import pandas as pd
 from scipy.stats import norm
-from itertools import product
 from skopt import gp_minimize
 from skopt.space import Real
 from skopt.utils import use_named_args
-from scipy.integrate import quad
 import time
 
 from config import Config
-from plot_figures import plot_figures, plot_final_distributions, plot_allocation_vs_utility
+from plot_figures import plot_allocation_vs_utility, plot_preference_curve, plot_final_wealth_distribution
 from get_utility_function import get_utility_func
 
 
@@ -39,8 +37,13 @@ def load_gp_predictions(cfg: Config):
     current_index = len(df)
     target_index = np.searchsorted(X_pred.ravel(), current_index)
 
-    mu_seq = y_pred[target_index : target_index + cfg.horizon_weeks]
-    sigma_seq = y_std[target_index : target_index + cfg.horizon_weeks]
+    # Calculate number of rebalancing periods
+    T = cfg.horizon_weeks // cfg.rebalance_every
+    
+    # Load predictions at rebalancing intervals
+    rebalance_indices = [target_index + (t + 1) * cfg.rebalance_every for t in range(T)]
+    mu_seq = y_pred[rebalance_indices]
+    sigma_seq = y_std[rebalance_indices]
 
     return mu_seq, sigma_seq, current_log_price
 
@@ -65,8 +68,8 @@ def objective_func(p, mu_seq, sigma_seq, current_log_price, cfg, grid_points_per
     all_paths = np.stack([g.ravel() for g in grids], axis=1)
     n_paths = all_paths.shape[0]
 
-    # Vectorized wealth calculation
-    wealth = np.full(n_paths, cfg.initial_wealth)
+    # Start with log wealth
+    log_wealth = np.full(n_paths, np.log(cfg.initial_wealth))
     x_prev = np.full(n_paths, current_log_price)
 
     # Pre-compute p array for faster indexing
@@ -74,20 +77,22 @@ def objective_func(p, mu_seq, sigma_seq, current_log_price, cfg, grid_points_per
     
     for t in range(T):
         x_now = all_paths[:, t]
-        # Vectorized exponential operations
-        price_prev = np.exp(x_prev)
-        price_now = np.exp(x_now)
-
-        # Vectorized portfolio calculations
-        p_t = p_array[t]
-        cash = wealth * (1 - p_t)
-        btc = (wealth * p_t) / price_prev
-        wealth = cash + btc * price_now
-
+        
+        # Calculate log returns
+        log_return = x_now - x_prev
+        
+        # Update log wealth using the formula from the image:
+        # log(W_{t+1}) = log(W_t) + log[(1-p_t) + p_t * exp(log_return)]
+        portfolio_return = (1 - p_array[t]) + p_array[t] * np.exp(log_return)
+        
+        # Add numerical stability check
+        portfolio_return = np.maximum(portfolio_return, 1e-10)
+        
+        log_wealth += np.log(portfolio_return)
         x_prev = x_now
 
-    # Use the preference curve utility function for all cases
-    utilities = np.array([utility(w) for w in wealth])
+    # Pass entire log_wealth array to utility function (vectorized)
+    utilities = utility(log_wealth)
 
     # More efficient probability calculation
     # Pre-compute mu and sigma arrays
@@ -248,20 +253,10 @@ def main():
     mid_time = time.time()
     elapsed_time = mid_time - start_time
     print(f"\nElapsed time for optimization: {elapsed_time:.2f} seconds")
-
-    # Generate single-step plots using first period data for visualization
-    mu_first_period = mu_seq[0]  # First period prediction
-    sigma_first_period = sigma_seq[0]  # First period uncertainty
-    optimal_weight_first_period = optimal_p[0]  # First period allocation
     
-    plot_figures(mu_first_period, sigma_first_period, current_log_price, optimal_weight_first_period, cfg)
-    
-    # Generate the multi-step allocation plot - pass the objective function
     plot_allocation_vs_utility(mu_seq, sigma_seq, current_log_price, optimal_p, cfg, grid_points_per_dim, objective_func)
-    print("Saved allocation_vs_utility.png")
-    
-    # Generate final distribution plots
-    plot_final_distributions(mu_seq, sigma_seq, current_log_price, optimal_p, cfg)
+    plot_preference_curve(cfg)
+    plot_final_wealth_distribution(mu_seq, sigma_seq, current_log_price, optimal_p, cfg)
 
     # Print timing information
     end_time = time.time()
