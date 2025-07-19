@@ -40,7 +40,7 @@ def plot_preference_curve(cfg: Config):
     # Format x-axis with powers of 10
     ax = plt.gca()
     ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${int(x):,}'))
-    ax.tick_params(axis='both', which='major', labelsize=14)  # Only changed this line
+    ax.tick_params(axis='both', which='major', labelsize=14)
     
     plt.grid(True, alpha=0.3, which='both')  # Show both major and minor grid lines
     
@@ -189,7 +189,7 @@ def plot_final_wealth_distribution(mu_seq, sigma_seq, current_log_price, optimal
     # Format x-axis as currency
     ax = plt.gca()
     ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${int(x)}'))
-    ax.tick_params(axis='both', which='major', labelsize=14)  # Only changed this line
+    ax.tick_params(axis='both', which='major', labelsize=14)
     
     plt.grid(True, alpha=0.3)
     
@@ -278,7 +278,7 @@ def plot_allocation_vs_utility(mu_seq, sigma_seq, current_log_price, optimal_p, 
     # Remove numbers from y-axis (utility axis)
     ax = plt.gca()
     ax.set_yticklabels([])
-    ax.tick_params(axis='x', which='major', labelsize=14)  # Only changed this line
+    ax.tick_params(axis='x', which='major', labelsize=14)
     
     plt.grid(True, alpha=0.3)
     
