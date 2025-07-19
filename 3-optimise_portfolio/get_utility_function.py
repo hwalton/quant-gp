@@ -2,17 +2,6 @@ from config import Config
 import numpy as np
 
 def _fit_preference_curve(w, points, poly_degree=3):
-    """
-    Helper function to fit straight lines through coordinate points
-    
-    Args:
-        w: wealth value to evaluate
-        points: list of (wealth, preference) tuples
-        poly_degree: ignored (kept for compatibility)
-    
-    Returns:
-        preference value at wealth w
-    """
     # Sort points by wealth
     points = sorted(points, key=lambda x: x[0])
     
@@ -176,12 +165,27 @@ def get_preference_curve(cfg: Config):
     if cfg.preference_curve == 'coordinate_points':
         def coordinate_points(w):
             # Get coordinate points from config
-            points = getattr(cfg, 'preference_points', [(np.log(800), -1), (np.log(4000),0.9)])
+            points = getattr(cfg, 'preference_points', [(np.log(750), -0.8), (np.log(1200), 0.6), (np.log(4000), 0.9)])
             poly_degree = getattr(cfg, 'preference_poly_degree', 3)
         
             return _fit_preference_curve(w, points, poly_degree)
     
         return coordinate_points
+    
+    elif cfg.preference_curve == 'step_below_1000':
+        def step_below(w):
+            if w < np.log(950):
+                return -1
+            else:
+                return 0.9
+        return step_below
+    elif cfg.preference_curve == 'step_above_1000':
+        def step_above(w):
+            if w < np.log(1050):
+                return -1
+            else:
+                return 0.9
+        return step_above
     else:
         raise ValueError(f"Unsupported preference curve: {cfg.preference_curve}")
     
