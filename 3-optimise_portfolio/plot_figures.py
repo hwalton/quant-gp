@@ -183,6 +183,13 @@ def plot_final_wealth_distribution(mu_seq, sigma_seq, current_log_price, optimal
 def plot_final_utility_distribution(mu_seq, sigma_seq, current_log_price, optimal_p, cfg: Config):
     """Plot utility distribution after all optimization steps"""
     utility = get_utility_func(cfg)
+    
+    # Handle both single value and array cases
+    if np.isscalar(optimal_p):
+        optimal_p = [optimal_p]
+        mu_seq = [mu_seq] if np.isscalar(mu_seq) else mu_seq[:1]
+        sigma_seq = [sigma_seq] if np.isscalar(sigma_seq) else sigma_seq[:1]
+    
     T = len(optimal_p)
     
     # Use same grid calculation as in objective_numerical_integral
@@ -296,19 +303,24 @@ def plot_final_utility_distribution(mu_seq, sigma_seq, current_log_price, optima
              linewidth=2, color='purple')
     
     plt.axvline(initial_utility, color='r', linestyle='--', 
-                label=f'Initial Utility: {initial_utility:.3f}', linewidth=2)
+                label=f'Initial Utility', linewidth=2)  # Removed numerical value
     plt.axvline(expected_utility_val, color='orange', linestyle=':', 
-                label=f'Expected Utility: {expected_utility_val:.3f}', linewidth=2)
+                label=f'Expected Utility', linewidth=2)  # Removed numerical value
     
     plt.xlabel('Final Utility Value')
     plt.ylabel('Probability Density')
     plt.title(f'Final Utility Distribution After All Steps ({cfg.preference_curve.replace("_", " ").title()})')
+    
+    # Remove numbers from x-axis (utility axis)
+    ax = plt.gca()
+    ax.set_xticklabels([])
+    
     plt.grid(True, alpha=0.3)
     plt.legend()
     plt.tight_layout()
     
-    # Add statistics text
-    plt.text(0.02, 0.98, f'Expected Final Utility: {expected_utility_val:.4f}\nOptimal Strategy: {np.round(optimal_p, 2)}', 
+    # Remove utility values from statistics text
+    plt.text(0.02, 0.98, f'Optimal Strategy: {np.round(optimal_p, 2)}', 
              transform=plt.gca().transAxes, verticalalignment='top', 
              bbox=dict(boxstyle='round', facecolor='lightcyan', alpha=0.8))
     
@@ -320,7 +332,7 @@ def plot_allocation_vs_utility(mu_seq, sigma_seq, current_log_price, optimal_p, 
     T = len(optimal_p)
     
     # Range of BTC allocations from 0% to 100% for FIRST step only
-    allocation_range = np.linspace(0, 1, 21)  # 101 points from 0% to 100%
+    allocation_range = np.linspace(0, 1, 21)
     expected_utilities = []
     
     print(f"Calculating allocation vs utility plot with {len(allocation_range)} points...")
@@ -344,20 +356,25 @@ def plot_allocation_vs_utility(mu_seq, sigma_seq, current_log_price, optimal_p, 
     plt.axvline(optimal_p[0] * 100, color='red', linestyle='--', 
                 label=f'Optimal First Allocation: {optimal_p[0]:.1%}', linewidth=2)
     
-    # Mark the optimal point
+    # Mark the optimal point (without showing utility value)
     optimal_utility = expected_utilities[np.argmin(np.abs(allocation_range - optimal_p[0]))]
     plt.plot(optimal_p[0] * 100, optimal_utility, 'ro', markersize=8, 
-             label=f'Optimal Utility: {optimal_utility:.4f}')
+             label=f'Optimal Point')  # Removed utility value
     
     plt.xlabel('First Step BTC Allocation (%)')
     plt.ylabel('Expected Utility')
     plt.title('Final Expected Utility vs First Step BTC Allocation (Multi-Step)')
+    
+    # Remove numbers from y-axis (utility axis)
+    ax = plt.gca()
+    ax.set_yticklabels([])
+    
     plt.grid(True, alpha=0.3)
     plt.legend()
     plt.tight_layout()
     
-    # Add statistics text
-    plt.text(0.02, 0.98, f'Maximum Final Expected Utility: {np.max(expected_utilities):.4f}\nOptimal First Allocation: {optimal_p[0]:.1%}\nOptimal Strategy: {np.round(optimal_p, 2)}', 
+    # Remove utility values from statistics text
+    plt.text(0.02, 0.98, f'Optimal First Allocation: {optimal_p[0]:.1%}\nOptimal Strategy: {np.round(optimal_p, 2)}', 
              transform=plt.gca().transAxes, verticalalignment='bottom', 
              bbox=dict(boxstyle='round', facecolor='lightgreen', alpha=0.8))
     
