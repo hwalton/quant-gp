@@ -51,78 +51,46 @@ def objective_func(p, mu_seq, sigma_seq, current_log_price, cfg, grid_points_per
     T = cfg.horizon_weeks // cfg.rebalance_every
     assert len(p) == T, f"Expected p of length {T}"
 
-    # Build 1D grids for each future rebalance log-price x_t
+    # Build 1D grids for each future log-price x_t
     grid_limits = [
-        np.linspace(mu_seq[t] - 4*sigma_seq[t], mu_seq[t] + 4*sigma_seq[t], grid_points_per_dim)
+        np.linspace(mu_seq[t] - 4 * sigma_seq[t], mu_seq[t] + 4 * sigma_seq[t], grid_points_per_dim)
         for t in range(T)
     ]
     dx = np.array([g[1] - g[0] for g in grid_limits])
 
-    # Create meshgrid for all path combinations
+    # Create meshgrid and flatten to all paths shape (n_paths, T)
     grids = np.meshgrid(*grid_limits, indexing='ij')
-    
-    # Stack to get all paths: shape (n_total_paths, T)
     all_paths = np.stack([g.ravel() for g in grids], axis=1)
     n_paths = all_paths.shape[0]
 
-    # Initialize log_wealth instead of wealth
+    # Initialise log-wealth with log(initial_wealth)
     log_wealth = np.full(n_paths, np.log(cfg.initial_wealth))
     x_prev = np.full(n_paths, current_log_price)
-
-    # Pre-compute p array for faster indexing
     p_array = np.array(p)
-    
+
+    # Evolve log-wealth over each rebalance period
     for t in range(T):
         x_now = all_paths[:, t]
-        
-        # Calculate log of portfolio value for each path
-        # Following the formula: log(W_t) = log(W_{t-1}) + log[(1-p_t) + p_t * exp(x_{t+1,R} - x_{t,R})]
+        returns = np.exp(x_now - x_prev)
         p_t = p_array[t]
-        
-        # For each path, calculate the log portfolio return
-        log_portfolio_returns = []
-        for i in range(n_paths):
-            # Portfolio return factor: (1-p_t) + p_t * exp(return)
-            log_return = x_now[i] - x_prev[i]  # x_{t+1,R} - x_{t,R}
-            portfolio_return_factor = (1 - p_t) + p_t * np.exp(log_return)
-            
-            # Add log of this factor to log wealth
-            if portfolio_return_factor <= 0:
-                # Handle edge case - should be very rare with reasonable p_t values
-                log_portfolio_returns.append(-np.inf)
-            else:
-                log_portfolio_returns.append(np.log(portfolio_return_factor))
-        
-        # Update log wealth
-        log_wealth = log_wealth + np.array(log_portfolio_returns)
+        growth = (1 - p_t) + p_t * returns
+        log_wealth += np.log(growth)
         x_prev = x_now
 
-    # Convert log_wealth back to wealth for utility calculation
-    # (assuming your utility function still expects wealth, not log_wealth)
-    wealth = np.exp(log_wealth)
-    
-    # Calculate utilities
-    utilities = np.array([utility(w) for w in wealth])
+    # Apply utility to final log-wealth
+    utilities = np.array([utility(log_w) for log_w in log_wealth])
 
-    # More efficient probability calculation
-    # Pre-compute mu and sigma arrays
-    mu_array = np.array([mu_seq[t] for t in range(T)])
-    sigma_array = np.array([sigma_seq[t] for t in range(T)])
-    
-    # Vectorized log probability calculation
-    log_probs = np.sum(
-        norm.logpdf(all_paths, loc=mu_array, scale=sigma_array), 
-        axis=1
-    )
+    # Compute joint probability density
+    mu_array = np.array(mu_seq[:T])
+    sigma_array = np.array(sigma_seq[:T])
+    log_probs = np.sum(norm.logpdf(all_paths, loc=mu_array, scale=sigma_array), axis=1)
     prob_densities = np.exp(log_probs)
 
-    # Pre-compute volume element
+    # Multiply by the volume element (product of dx)
     volume_element = np.prod(dx)
+    expected_utility = np.sum(utilities * prob_densities) * volume_element
 
-    # Final integration
-    total = np.sum(utilities * prob_densities) * volume_element
-
-    return total
+    return expected_utility
 
 def run_bayesian_optimisation(cfg, mu_seq, sigma_seq, current_log_price, months, grid_points_per_dim):
     # Search space: p_t in [0, 1] for each month

@@ -130,7 +130,7 @@ def plot_preference_curve(cfg: Config):
              color='blue', linewidth=2)
     
     # Add reference lines
-    plt.axvline(cfg.initial_wealth, color='red', linestyle='--', 
+    plt.axvline(np.log(cfg.initial_wealth), color='red', linestyle='--', 
                 label=f'Initial ln(Wealth): ${cfg.initial_wealth:.0f}', linewidth=2)
 
     

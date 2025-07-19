@@ -176,7 +176,7 @@ def get_preference_curve(cfg: Config):
     if cfg.preference_curve == 'coordinate_points':
         def coordinate_points(w):
             # Get coordinate points from config
-            points = getattr(cfg, 'preference_points', [(6.39, -0.1), (7.31,0.9)])
+            points = getattr(cfg, 'preference_points', [(np.log(800), -1), (np.log(4000),0.9)])
             poly_degree = getattr(cfg, 'preference_poly_degree', 3)
         
             return _fit_preference_curve(w, points, poly_degree)
