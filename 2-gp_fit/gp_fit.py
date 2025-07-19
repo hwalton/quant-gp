@@ -80,28 +80,44 @@ def save_outputs(gp, X_pred, y_pred, y_std, cfg: Config):
     np.save(cfg.y_std_pkl, y_std)
 
 def plot_results(X, y, X_pred, y_pred, y_std, log_trend, cfg: Config):
-    fig, ax = plt.subplots(figsize=(30, 18))
+    # Only show the final half of the data for axis limits
+    half_idx = len(X) -260
+    X_display = X[half_idx:]
+    y_display = y[half_idx:]
     
-    ax.plot(X, y, 'kx', label='Observed BTC prices')
-    ax.plot(X_pred, y_pred, 'b-', label='GP mean prediction')
-    ax.plot(X_pred, log_trend(X_pred.ravel()), 'g--', label='Log trend fit')
-    ax.fill_between(X_pred.ravel(), y_pred - y_std, y_pred + y_std, alpha=0.2, label='1σ confidence')
+    # But keep the full X_pred range for predictions
+    X_pred_display = X_pred[X_pred.ravel() >= X_display[0]]
+    y_pred_display = y_pred[X_pred.ravel() >= X_display[0]]
+    y_std_display = y_std[X_pred.ravel() >= X_display[0]]
+
+    fig, ax = plt.subplots(figsize=(10, 6))
     
-    ax.set_xlabel('Weeks since start')
-    ax.set_ylabel('Log(BTC Price (USD))')
-    ax.set_title('Gaussian Process Regression on BTC Weekly Prices')
-    ax.legend()
-    ax.grid(True)
+    # Plot all observed data points with smaller x's and lower zorder (behind axis)
+    ax.plot(X, y, 'kx', label='Observed BTC prices', markersize=3.5, zorder=1)
     
-    # Calculate dynamic y-limits to include all data
-    y_min = min(y.min(), (y_pred - y_std).min())
-    y_max = max(y.max(), (y_pred + y_std).max())
+    # Plot GP mean prediction, log trend fit, and confidence band over full range
+    ax.plot(X_pred_display, y_pred_display, 'b-', label='GP mean prediction', linewidth=2, zorder=2)
+    ax.plot(X_pred_display, log_trend(X_pred_display.ravel()), 'g--', label='Log trend fit', linewidth=2, zorder=2)
+    ax.fill_between(X_pred_display.ravel(), y_pred_display - y_std_display, y_pred_display + y_std_display, 
+                    alpha=0.2, label='1σ confidence', color='skyblue', zorder=2)
     
-    # Add some padding (10% of the range)
+    ax.set_xlabel('Weeks since start', fontsize=18)
+    ax.set_ylabel('Log(BTC Price (USD))', fontsize=18)
+    ax.set_title('Gaussian Process Regression on BTC Weekly Prices', fontsize=21)
+    ax.legend(loc='best', fontsize=15)
+    ax.grid(True, alpha=0.3)
+    
+    # Set axis limits to only show the final half
+    ax.set_xlim(X_display[0], X_pred.ravel()[-1])
+    
+    # Calculate dynamic y-limits based on displayed data
+    y_min = min(y_display.min(), (y_pred_display - y_std_display).min())
+    y_max = max(y_display.max(), (y_pred_display + y_std_display).max())
     y_range = y_max - y_min
     padding = y_range * 0.1
-    
     ax.set_ylim(y_min - padding, y_max + padding)
+    
+    ax.tick_params(axis='both', which='major', labelsize=14)
     
     fig.tight_layout()
     fig.savefig(cfg.plot_path)
