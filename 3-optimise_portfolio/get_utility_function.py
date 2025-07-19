@@ -34,12 +34,11 @@ import numpy as np
 #         raise ValueError(f"Unsupported utility function: {cfg.utility_function}")
 def _fit_preference_curve(w, points):
     """
-    Helper function to fit straight lines through coordinate points
+    Helper function to fit straight lines through coordinate points on a semilogx scale
     
     Args:
         w: wealth value to evaluate
         points: list of (wealth, preference) tuples
-        poly_degree: ignored (kept for compatibility)
     
     Returns:
         preference value at wealth w
@@ -68,14 +67,19 @@ def _fit_preference_curve(w, points):
     if w >= max_wealth:
         return max_pref
     
-    # Between points: simple linear interpolation
-    return np.interp(w, wealth_points, pref_points)
+    # Between points: linear interpolation in log-space for x-axis
+    # Convert wealth to log scale for interpolation
+    log_wealth_points = np.log(wealth_points)
+    log_w = np.log(w)
+    
+    # Linear interpolation in log-space
+    return np.interp(log_w, log_wealth_points, pref_points)
 
 def get_preference_curve(cfg: Config):
     if cfg.preference_curve == 'step_below_1000':
         def step_below(w):
-            if w < 950:
-                return 0
+            if w < 850:
+                return -1
             else:
                 return 0.5
         return step_below
@@ -134,7 +138,7 @@ def get_preference_curve(cfg: Config):
     elif cfg.preference_curve == 'coordinate_points':
         def coordinate_points(w):
             # Get coordinate points from config
-            points = getattr(cfg, 'preference_points', [(600, -1), (1500,0.0), (5000, 0.5)])
+            points = getattr(cfg, 'preference_points', [(1000, -1), (1500,0.0), (5000, 0.5)])
             
             return _fit_preference_curve(w, points)
         
