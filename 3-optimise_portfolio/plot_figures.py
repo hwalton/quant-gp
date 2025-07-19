@@ -513,12 +513,13 @@ def plot_allocation_vs_utility(mu_seq, sigma_seq, current_log_price, optimal_p, 
     
     # Add statistics text
     plt.text(0.02, 0.98, f'Maximum Final Expected Utility: {np.max(expected_utilities):.4f}\nOptimal First Allocation: {optimal_p[0]:.1%}\nOptimal Strategy: {np.round(optimal_p, 2)}', 
-             transform=plt.gca().transAxes, verticalalignment='top', 
+             transform=plt.gca().transAxes, verticalalignment='bottom', 
              bbox=dict(boxstyle='round', facecolor='lightgreen', alpha=0.8))
     
     plt.savefig("allocation_vs_utility.png", dpi=150)
     plt.close()
     
+    print("hw_debug: utility array: ", expected_utilities)
     print("Completed allocation vs utility plot")
 
 def plot_figures(mu, sigma, current_log_price, optimal_weight, cfg: Config):

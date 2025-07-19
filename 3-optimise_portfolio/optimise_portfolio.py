@@ -39,8 +39,13 @@ def load_gp_predictions(cfg: Config):
     current_index = len(df)
     target_index = np.searchsorted(X_pred.ravel(), current_index)
 
-    mu_seq = y_pred[target_index : target_index + cfg.horizon_weeks]
-    sigma_seq = y_std[target_index : target_index + cfg.horizon_weeks]
+    # Calculate number of rebalancing periods
+    T = cfg.horizon_weeks // cfg.rebalance_every
+    
+    # Load predictions at rebalancing intervals
+    rebalance_indices = [target_index + (t + 1) * cfg.rebalance_every for t in range(T)]
+    mu_seq = y_pred[rebalance_indices]
+    sigma_seq = y_std[rebalance_indices]
 
     return mu_seq, sigma_seq, current_log_price
 

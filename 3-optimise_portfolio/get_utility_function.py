@@ -78,10 +78,10 @@ def _fit_preference_curve(w, points):
 def get_preference_curve(cfg: Config):
     if cfg.preference_curve == 'step_below_1000':
         def step_below(w):
-            if w < 850:
+            if w < 900:
                 return -1
             else:
-                return 0.5
+                return 0.9
         return step_below
     
     elif cfg.preference_curve == 'step_above_1000':
