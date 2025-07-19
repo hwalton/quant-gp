@@ -3,6 +3,6 @@ venv
 *.pkl
 *.npy
 
-!objective_function.png
+!objective_function*.png
 
 __pycache__
