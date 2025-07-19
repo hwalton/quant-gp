@@ -97,9 +97,9 @@ def plot_results(cfg: Config):
     X_pred, y_pred, y_std = load_saved_predictions(cfg)
     
     # Only show the final half of the data for axis limits
-    half_idx = len(X) - 260
-    X_display = X[half_idx:]
-    y_display = y[half_idx:]
+    start_idx = len(X) - 260
+    X_display = X[start_idx:]
+    y_display = y[start_idx:]
     
     # But keep the full X_pred range for predictions
     X_pred_display = X_pred[X_pred.ravel() >= X_display[0]]
@@ -135,8 +135,15 @@ def plot_results(cfg: Config):
     # Set axis limits to only show the final half
     ax.set_xlim(X_display[0], X_pred.ravel()[-1])
     
-    # Format y-axis with currency formatting
-    ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, p: f'${int(y):,}'))
+    # Custom formatter to replace ,000 with k
+    def currency_formatter(y, p):
+        if y >= 1000:
+            return f'${int(y/1000)}k'
+        else:
+            return f'${int(y)}'
+    
+    # Format y-axis with custom currency formatting
+    ax.yaxis.set_major_formatter(plt.FuncFormatter(currency_formatter))
     ax.tick_params(axis='both', which='major', labelsize=14)
     
     # Calculate dynamic y-limits based on displayed data (using actual prices)
@@ -148,6 +155,7 @@ def plot_results(cfg: Config):
     fig.savefig(cfg.plot_path, dpi=150, bbox_inches='tight')
     plt.close('all')
     print(f"Plot saved to {cfg.plot_path}")
+    
 def main():
     cfg = Config()
 
