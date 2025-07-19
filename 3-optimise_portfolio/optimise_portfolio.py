@@ -10,11 +10,11 @@ import time
 
 from config import Config
 from plot_figures import plot_figures, plot_final_distributions, plot_allocation_vs_utility
-from get_utilty_function import get_utility_func
+from get_utility_function import get_utility_func
 
 
 def calculate_grid_parameters(T, max_total_paths=1000000):
-    grid_points_per_dim = int(max_total_paths**(1/T))
+    grid_points_per_dim = min(100, int(max_total_paths**(1/T)))
     
     # Ensure we don't exceed the limit
     actual_paths = grid_points_per_dim ** T
@@ -86,24 +86,8 @@ def objective_func(p, mu_seq, sigma_seq, current_log_price, cfg, grid_points_per
 
         x_prev = x_now
 
-    # Vectorize utility calculation where possible
-    if cfg.utility_function in ['log', 'sqrt', 'identity', 'linear', 'crra']:
-        # These can be fully vectorized
-        if cfg.utility_function == 'log':
-            utilities = np.log(np.maximum(wealth, 1e-10))  # Avoid log(0)
-        elif cfg.utility_function == 'sqrt':
-            utilities = np.sqrt(np.maximum(wealth, 0))
-        elif cfg.utility_function in ['identity', 'linear']:
-            utilities = wealth
-        elif cfg.utility_function == 'crra':
-            gamma = cfg.gamma
-            if gamma == 1.0:
-                utilities = np.log(np.maximum(wealth, 1e-10))
-            else:
-                utilities = (np.maximum(wealth, 1e-10)**(1-gamma) - 1) / (1-gamma)
-    else:
-        # For complex utility functions, use list comprehension (still faster than loop)
-        utilities = np.array([utility(w) for w in wealth])
+    # Use the preference curve utility function for all cases
+    utilities = np.array([utility(w) for w in wealth])
 
     # More efficient probability calculation
     # Pre-compute mu and sigma arrays

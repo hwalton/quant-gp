@@ -6,7 +6,7 @@ from scipy.stats import norm, gaussian_kde
 from scipy import interpolate
 
 from config import Config
-from get_utilty_function import get_utility_func
+from get_utility_function import get_utility_func
 
 def plot_wealth_distribution(mu, sigma, current_log_price, optimal_weight, cfg: Config):
     """Plot wealth distribution after 1 step"""
@@ -38,7 +38,7 @@ def plot_wealth_distribution(mu, sigma, current_log_price, optimal_weight, cfg: 
     plt.title('Wealth Distribution of Optimal Portfolio After 1 Step')
     
     # Fixed scale: always 0 to 2x initial wealth
-    plt.xlim(0, 2 * cfg.initial_wealth)
+    # plt.xlim(0, 2 * cfg.initial_wealth)
     
     # Fix the x-axis formatting
     ax = plt.gca()
@@ -115,46 +115,91 @@ def plot_utility_distribution(mu, sigma, current_log_price, optimal_weight, cfg:
     plt.savefig("utility_distribution.png", dpi=150)
     plt.close()
 
-def plot_utility_function(cfg: Config):
-    """Plot the utility function"""
-    utility = get_utility_func(cfg)
-    if cfg.utility_function == 'log':
-        x_vals = np.linspace(0.01, 3000, 500)
-    elif cfg.utility_function == 'sqrt':
-        x_vals = np.linspace(0, 3000, 500)
-    elif cfg.utility_function in ['sigmoid']:
-        x_vals = np.linspace(cfg.w0 - 1.0, cfg.w0 + 1.0, 500)
-    elif cfg.utility_function in ['identity', 'linear']:
-        x_vals = np.linspace(0, 3000, 500)
-    elif cfg.utility_function in ['step', 'smooth_step']:
-        x_vals = np.linspace(0, 3000, 500)
-    elif cfg.utility_function in ['tanh','tanh_custom']:
-        x_vals = np.linspace(0, 5000, 500)
-    elif cfg.utility_function == 'crra':
-        x_vals = np.linspace(0.01, 3000, 500)
-    else:
-        raise ValueError(f"Unsupported utility function: {cfg.utility_function}")
+# def plot_utility_function(cfg: Config):
+#     """Plot the utility function"""
+#     utility = get_utility_func(cfg)
+#     if cfg.utility_function == 'log':
+#         x_vals = np.linspace(0.01, 3000, 500)
+#     elif cfg.utility_function == 'sqrt':
+#         x_vals = np.linspace(0, 3000, 500)
+#     elif cfg.utility_function in ['sigmoid']:
+#         x_vals = np.linspace(cfg.w0 - 1.0, cfg.w0 + 1.0, 500)
+#     elif cfg.utility_function in ['identity', 'linear']:
+#         x_vals = np.linspace(0, 3000, 500)
+#     elif cfg.utility_function in ['step', 'smooth_step']:
+#         x_vals = np.linspace(0, 3000, 500)
+#     elif cfg.utility_function in ['tanh','tanh_custom']:
+#         x_vals = np.linspace(0, 5000, 500)
+#     elif cfg.utility_function == 'crra':
+#         x_vals = np.linspace(0.01, 3000, 500)
+#     else:
+#         raise ValueError(f"Unsupported utility function: {cfg.utility_function}")
 
-    y_vals = [utility(w) for w in x_vals]
-    plt.figure(figsize=(8, 4))
-    plt.plot(x_vals, y_vals, label=f'{cfg.utility_function.capitalize()} utility', color='blue')
+#     y_vals = [utility(w) for w in x_vals]
+#     plt.figure(figsize=(8, 4))
+#     plt.plot(x_vals, y_vals, label=f'{cfg.utility_function.capitalize()} utility', color='blue')
 
-    if cfg.utility_function in ['sigmoid', 'tanh']:
-        plt.axvline(cfg.initial_wealth, color='grey', linestyle='--', label=f'Initial wealth ({cfg.initial_wealth})')
-    elif cfg.utility_function in ['step', 'smooth_step']:
-        plt.axvline(cfg.step_threshold, color='grey', linestyle='--', label=f'Threshold ({cfg.step_threshold})')
-    elif cfg.utility_function == 'tanh_custom':
-        plt.axvline(cfg.initial_wealth, color='grey', linestyle='--', label=f'Initial wealth ({cfg.initial_wealth})')
-    elif cfg.utility_function == 'crra':
-        plt.axvline(cfg.initial_wealth, color='grey', linestyle='--', label=f'Initial wealth ({cfg.initial_wealth})')
+#     if cfg.utility_function in ['sigmoid', 'tanh']:
+#         plt.axvline(cfg.initial_wealth, color='grey', linestyle='--', label=f'Initial wealth ({cfg.initial_wealth})')
+#     elif cfg.utility_function in ['step', 'smooth_step']:
+#         plt.axvline(cfg.step_threshold, color='grey', linestyle='--', label=f'Threshold ({cfg.step_threshold})')
+#     elif cfg.utility_function == 'tanh_custom':
+#         plt.axvline(cfg.initial_wealth, color='grey', linestyle='--', label=f'Initial wealth ({cfg.initial_wealth})')
+#     elif cfg.utility_function == 'crra':
+#         plt.axvline(cfg.initial_wealth, color='grey', linestyle='--', label=f'Initial wealth ({cfg.initial_wealth})')
 
-    plt.xlabel('Wealth')
-    plt.ylabel('Utility')
-    plt.title('Utility Function')
-    plt.grid(True)
+#     plt.xlabel('Wealth')
+#     plt.ylabel('Utility')
+#     plt.title('Utility Function')
+#     plt.grid(True)
+#     plt.legend()
+#     plt.tight_layout()
+#     plt.savefig("utility_func.png")
+#     plt.close()
+
+def plot_preference_curve(cfg: Config):
+    """Plot the preference curve function"""
+    from get_utility_function import get_preference_curve
+    
+    preference_curve = get_preference_curve(cfg)
+    
+    # Always use wealth range from 0 to 5000 for preference curves
+    x_vals = np.linspace(0, 5100, 1000)
+    y_vals = [preference_curve(w) for w in x_vals]
+    
+    plt.figure(figsize=(10, 6))
+    plt.plot(x_vals, y_vals, label=f'{cfg.preference_curve.replace("_", " ").title()} Preference', 
+             color='blue', linewidth=2)
+    
+    # Add reference lines
+    plt.axvline(cfg.initial_wealth, color='red', linestyle='--', 
+                label=f'Initial Wealth: ${cfg.initial_wealth:.0f}', linewidth=2)
+    
+    # Highlight interesting regions
+    if 'step' in cfg.preference_curve:
+        plt.axvline(1000, color='orange', linestyle=':', 
+                    label='Step Threshold: $1000', alpha=0.7)
+    elif cfg.preference_curve == 'target_seeking':
+        plt.axvline(2500, color='green', linestyle=':', 
+                    label='Target: $2500', alpha=0.7)
+    elif cfg.preference_curve == 'fast_climb_drop':
+        plt.axvline(2000, color='purple', linestyle=':', 
+                    label='Peak: $2000', alpha=0.7)
+    
+    plt.xlabel('Wealth ($)')
+    plt.ylabel('Preference Value')
+    plt.title(f'Preference Curve: {cfg.preference_curve.replace("_", " ").title()}')
+    plt.xlim(0, 5100)
+    
+    # Format x-axis as currency
+    ax = plt.gca()
+    ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${int(x)}'))
+    
+    plt.grid(True, alpha=0.3)
     plt.legend()
     plt.tight_layout()
-    plt.savefig("utility_func.png")
+
+    plt.savefig("preference_curve.png", dpi=150)
     plt.close()
 
 def plot_final_wealth_distribution(mu_seq, sigma_seq, current_log_price, optimal_p, cfg: Config):
@@ -211,24 +256,61 @@ def plot_final_wealth_distribution(mu_seq, sigma_seq, current_log_price, optimal
     # Calculate expected wealth
     expected_wealth = np.sum(wealth * probabilities)
     
-    # Create weighted samples for KDE
-    # Repeat each wealth value according to its probability (scaled up)
-    sample_weights = (probabilities * 10000).astype(int)  # Scale probabilities to integer weights
-    wealth_samples = np.repeat(wealth, sample_weights)
+    # Create histogram-based PDF using smooth curve through midpoints
+    num_bins = min(50, len(np.unique(wealth)))  # Adaptive number of bins
     
-    # Use KDE to create smooth PDF
-    if len(wealth_samples) > 0:
-        kde = gaussian_kde(wealth_samples)
+    # Calculate weighted histogram
+    hist_counts, bin_edges = np.histogram(wealth, bins=num_bins, weights=probabilities, density=True)
+    
+    # Calculate bin midpoints
+    bin_midpoints = (bin_edges[:-1] + bin_edges[1:]) / 2
+    
+    # Filter out zero-count bins for smoother interpolation
+    non_zero_mask = hist_counts > 0
+    filtered_midpoints = bin_midpoints[non_zero_mask]
+    filtered_counts = hist_counts[non_zero_mask]
+    
+    # Create smooth curve through the midpoints using interpolation
+    if len(filtered_midpoints) > 3:  # Need at least 4 points for cubic interpolation
+        # Use cubic spline interpolation for smooth curve
         wealth_range = np.linspace(wealth.min(), wealth.max(), 1000)
-        pdf_values = kde(wealth_range)
+        
+        # Extend the range slightly for better interpolation at edges
+        interp_func = interpolate.interp1d(
+            filtered_midpoints, filtered_counts, 
+            kind='cubic', bounds_error=False, fill_value=0
+        )
+        pdf_values = interp_func(wealth_range)
+        
+        # Ensure no negative values (can happen with cubic interpolation)
+        pdf_values = np.maximum(pdf_values, 0)
+        
+        # Normalize to ensure it's a proper PDF
+        if np.sum(pdf_values) > 0:
+            pdf_values = pdf_values / np.trapz(pdf_values, wealth_range)
+        
     else:
-        # Fallback if no samples
+        # Fallback to linear interpolation for few points
         wealth_range = np.linspace(wealth.min(), wealth.max(), 1000)
-        pdf_values = np.zeros_like(wealth_range)
+        if len(filtered_midpoints) > 1:
+            interp_func = interpolate.interp1d(
+                filtered_midpoints, filtered_counts, 
+                kind='linear', bounds_error=False, fill_value=0
+            )
+            pdf_values = interp_func(wealth_range)
+        else:
+            # Single point - create a narrow spike
+            pdf_values = np.zeros_like(wealth_range)
+            closest_idx = np.argmin(np.abs(wealth_range - filtered_midpoints[0]))
+            pdf_values[closest_idx] = filtered_counts[0]
     
     # Create smooth PDF plot
     plt.figure(figsize=(10, 6))
-    plt.plot(wealth_range, pdf_values, label='Final Wealth PDF', linewidth=2, color='skyblue')
+    
+    # Plot only the smooth curve
+    plt.plot(wealth_range, pdf_values, label='Final Wealth PDF', 
+             linewidth=2, color='skyblue')
+    
     plt.axvline(cfg.initial_wealth, color='r', linestyle='--', 
                 label=f'Initial Wealth: ${cfg.initial_wealth:.0f}', linewidth=2)
     plt.axvline(expected_wealth, color='orange', linestyle=':', 
@@ -237,6 +319,11 @@ def plot_final_wealth_distribution(mu_seq, sigma_seq, current_log_price, optimal
     plt.xlabel('Final Wealth ($)')
     plt.ylabel('Probability Density')
     plt.title('Final Wealth Distribution After All Steps')
+    
+    # Format x-axis as currency
+    ax = plt.gca()
+    ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${int(x)}'))
+    
     plt.grid(True, alpha=0.3)
     plt.legend()
     plt.tight_layout()
@@ -292,22 +379,8 @@ def plot_final_utility_distribution(mu_seq, sigma_seq, current_log_price, optima
         
         x_prev = x_now
     
-    # Calculate utilities
-    if cfg.utility_function in ['log', 'sqrt', 'identity', 'linear', 'crra']:
-        if cfg.utility_function == 'log':
-            utilities = np.log(np.maximum(wealth, 1e-10))
-        elif cfg.utility_function == 'sqrt':
-            utilities = np.sqrt(np.maximum(wealth, 0))
-        elif cfg.utility_function in ['identity', 'linear']:
-            utilities = wealth
-        elif cfg.utility_function == 'crra':
-            gamma = cfg.gamma
-            if gamma == 1.0:
-                utilities = np.log(np.maximum(wealth, 1e-10))
-            else:
-                utilities = (np.maximum(wealth, 1e-10)**(1-gamma) - 1) / (1-gamma)
-    else:
-        utilities = np.array([utility(w) for w in wealth])
+    # Calculate utilities using the preference curve approach
+    utilities = np.array([utility(w) for w in wealth])
     
     # Calculate probabilities for each path
     mu_array = np.array([mu_seq[t] for t in range(T)])
@@ -322,24 +395,61 @@ def plot_final_utility_distribution(mu_seq, sigma_seq, current_log_price, optima
     expected_utility_val = np.sum(utilities * probabilities)
     initial_utility = utility(cfg.initial_wealth)
     
-    # Create weighted samples for KDE
-    # Repeat each utility value according to its probability (scaled up)
-    sample_weights = (probabilities * 10000).astype(int)  # Scale probabilities to integer weights
-    utility_samples = np.repeat(utilities, sample_weights)
+    # Create histogram-based PDF using smooth curve through midpoints
+    num_bins = min(50, len(np.unique(utilities)))  # Adaptive number of bins
     
-    # Use KDE to create smooth PDF
-    if len(utility_samples) > 0:
-        kde = gaussian_kde(utility_samples)
+    # Calculate weighted histogram
+    hist_counts, bin_edges = np.histogram(utilities, bins=num_bins, weights=probabilities, density=True)
+    
+    # Calculate bin midpoints
+    bin_midpoints = (bin_edges[:-1] + bin_edges[1:]) / 2
+    
+    # Filter out zero-count bins for smoother interpolation
+    non_zero_mask = hist_counts > 0
+    filtered_midpoints = bin_midpoints[non_zero_mask]
+    filtered_counts = hist_counts[non_zero_mask]
+    
+    # Create smooth curve through the midpoints using interpolation
+    if len(filtered_midpoints) > 3:  # Need at least 4 points for cubic interpolation
+        # Use cubic spline interpolation for smooth curve
         utility_range = np.linspace(utilities.min(), utilities.max(), 1000)
-        pdf_values = kde(utility_range)
+        
+        # Extend the range slightly for better interpolation at edges
+        interp_func = interpolate.interp1d(
+            filtered_midpoints, filtered_counts, 
+            kind='cubic', bounds_error=False, fill_value=0
+        )
+        pdf_values = interp_func(utility_range)
+        
+        # Ensure no negative values (can happen with cubic interpolation)
+        pdf_values = np.maximum(pdf_values, 0)
+        
+        # Normalize to ensure it's a proper PDF
+        if np.sum(pdf_values) > 0:
+            pdf_values = pdf_values / np.trapz(pdf_values, utility_range)
+        
     else:
-        # Fallback if no samples
+        # Fallback to linear interpolation for few points
         utility_range = np.linspace(utilities.min(), utilities.max(), 1000)
-        pdf_values = np.zeros_like(utility_range)
+        if len(filtered_midpoints) > 1:
+            interp_func = interpolate.interp1d(
+                filtered_midpoints, filtered_counts, 
+                kind='linear', bounds_error=False, fill_value=0
+            )
+            pdf_values = interp_func(utility_range)
+        else:
+            # Single point - create a narrow spike
+            pdf_values = np.zeros_like(utility_range)
+            closest_idx = np.argmin(np.abs(utility_range - filtered_midpoints[0]))
+            pdf_values[closest_idx] = filtered_counts[0]
     
     # Create smooth PDF plot
     plt.figure(figsize=(10, 6))
-    plt.plot(utility_range, pdf_values, label='Final Utility PDF', linewidth=2, color='purple')
+    
+    # Plot only the smooth curve
+    plt.plot(utility_range, pdf_values, label='Final Utility PDF', 
+             linewidth=2, color='purple')
+    
     plt.axvline(initial_utility, color='r', linestyle='--', 
                 label=f'Initial Utility: {initial_utility:.3f}', linewidth=2)
     plt.axvline(expected_utility_val, color='orange', linestyle=':', 
@@ -347,7 +457,7 @@ def plot_final_utility_distribution(mu_seq, sigma_seq, current_log_price, optima
     
     plt.xlabel('Final Utility Value')
     plt.ylabel('Probability Density')
-    plt.title('Final Utility Distribution After All Steps')
+    plt.title(f'Final Utility Distribution After All Steps ({cfg.preference_curve.replace("_", " ").title()})')
     plt.grid(True, alpha=0.3)
     plt.legend()
     plt.tight_layout()
@@ -365,13 +475,13 @@ def plot_allocation_vs_utility(mu_seq, sigma_seq, current_log_price, optimal_p, 
     T = len(optimal_p)
     
     # Range of BTC allocations from 0% to 100% for FIRST step only
-    allocation_range = np.linspace(0, 1, 17)  # 101 points from 0% to 100%
+    allocation_range = np.linspace(0, 1, 21)  # 101 points from 0% to 100%
     expected_utilities = []
     
     print(f"Calculating allocation vs utility plot with {len(allocation_range)} points...")
     
     for i, first_allocation in enumerate(allocation_range):
-        if i % 16 == 0:
+        if i % 20 == 0:
             print(f"  Processing allocation {i+1}/{len(allocation_range)}: {first_allocation:.1%}")
         
         # Create allocation vector: vary first, keep rest optimal
@@ -420,8 +530,8 @@ def plot_figures(mu, sigma, current_log_price, optimal_weight, cfg: Config):
     plot_utility_distribution(mu, sigma, current_log_price, optimal_weight, cfg)
     print("Saved utility_distribution.png")
     
-    plot_utility_function(cfg)
-    print("Saved utility_func.png")
+    plot_preference_curve(cfg)
+    print("Saved preference_curve.png")
     
     # Remove this line - we call it separately in main() with multi-step parameters
     # plot_allocation_vs_utility(mu, sigma, current_log_price, optimal_weight, cfg)
