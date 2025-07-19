@@ -115,48 +115,6 @@ def plot_utility_distribution(mu, sigma, current_log_price, optimal_weight, cfg:
     plt.savefig("utility_distribution.png", dpi=150)
     plt.close()
 
-# def plot_utility_function(cfg: Config):
-#     """Plot the utility function"""
-#     utility = get_utility_func(cfg)
-#     if cfg.utility_function == 'log':
-#         x_vals = np.linspace(0.01, 3000, 500)
-#     elif cfg.utility_function == 'sqrt':
-#         x_vals = np.linspace(0, 3000, 500)
-#     elif cfg.utility_function in ['sigmoid']:
-#         x_vals = np.linspace(cfg.w0 - 1.0, cfg.w0 + 1.0, 500)
-#     elif cfg.utility_function in ['identity', 'linear']:
-#         x_vals = np.linspace(0, 3000, 500)
-#     elif cfg.utility_function in ['step', 'smooth_step']:
-#         x_vals = np.linspace(0, 3000, 500)
-#     elif cfg.utility_function in ['tanh','tanh_custom']:
-#         x_vals = np.linspace(0, 5000, 500)
-#     elif cfg.utility_function == 'crra':
-#         x_vals = np.linspace(0.01, 3000, 500)
-#     else:
-#         raise ValueError(f"Unsupported utility function: {cfg.utility_function}")
-
-#     y_vals = [utility(w) for w in x_vals]
-#     plt.figure(figsize=(8, 4))
-#     plt.plot(x_vals, y_vals, label=f'{cfg.utility_function.capitalize()} utility', color='blue')
-
-#     if cfg.utility_function in ['sigmoid', 'tanh']:
-#         plt.axvline(cfg.initial_wealth, color='grey', linestyle='--', label=f'Initial wealth ({cfg.initial_wealth})')
-#     elif cfg.utility_function in ['step', 'smooth_step']:
-#         plt.axvline(cfg.step_threshold, color='grey', linestyle='--', label=f'Threshold ({cfg.step_threshold})')
-#     elif cfg.utility_function == 'tanh_custom':
-#         plt.axvline(cfg.initial_wealth, color='grey', linestyle='--', label=f'Initial wealth ({cfg.initial_wealth})')
-#     elif cfg.utility_function == 'crra':
-#         plt.axvline(cfg.initial_wealth, color='grey', linestyle='--', label=f'Initial wealth ({cfg.initial_wealth})')
-
-#     plt.xlabel('Wealth')
-#     plt.ylabel('Utility')
-#     plt.title('Utility Function')
-#     plt.grid(True)
-#     plt.legend()
-#     plt.tight_layout()
-#     plt.savefig("utility_func.png")
-#     plt.close()
-
 def plot_preference_curve(cfg: Config):
     """Plot the preference curve function"""
     from get_utility_function import get_preference_curve
