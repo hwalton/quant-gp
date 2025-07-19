@@ -18,7 +18,7 @@ class Config:
     y_pred_pkl: str ='y_pred.npy'
     y_std_pkl: str ='y_std.npy'
     plot_path: str ='gp_output.png'
-    points_into_future: int =48*4
+    points_into_future: int = 48*3
     y_limit: tuple =(4, 18)
 
 def load_data(cfg: Config):
@@ -103,7 +103,7 @@ def plot_results(cfg: Config):
     X_pred, y_pred, y_std = load_saved_predictions(cfg)
     
     # Only show the final half of the data for axis limits
-    start_idx = len(X) - 260
+    start_idx = len(X) - 364
     X_display = X[start_idx:]
     y_display = y[start_idx:]
     
@@ -122,7 +122,7 @@ def plot_results(cfg: Config):
     fig, ax = plt.subplots(figsize=(10, 6))
     
     # Plot all observed data points with smaller x's and lower zorder (behind axis)
-    ax.plot(X, y_actual, 'kx', label='Observed BTC prices', markersize=5, zorder=1)
+    ax.plot(X, y_actual, 'kx', label='Historical BTC Prices', markersize=5, zorder=1)
     
     # Plot GP mean prediction and confidence band over full range
     ax.plot(X_pred_display, y_pred_display_actual, 'b-', label='Prediction Mean', linewidth=2, zorder=2)
@@ -134,7 +134,7 @@ def plot_results(cfg: Config):
     
     ax.set_xlabel('Date', fontsize=18)
     ax.set_ylabel('BTC Price (USD)', fontsize=18)
-    ax.set_title('Gaussian Process Regression on BTC Weekly Prices', fontsize=21)
+    ax.set_title('Probabilistic Regression on BTC Weekly Prices', fontsize=21)
     ax.legend(loc='best', fontsize=15)
     ax.grid(True, alpha=0.3, which='both')  # Show both major and minor grid lines
     
@@ -169,9 +169,9 @@ def plot_results(cfg: Config):
     # Custom formatter to replace ,000 with k
     def currency_formatter(y, p):
         if y >= 1000:
-            return f'${int(y/1000)}k'
+            return f'{int(y/1000)}k'
         else:
-            return f'${int(y)}'
+            return f'{int(y)}'
     
     # Format y-axis with custom currency formatting
     ax.yaxis.set_major_formatter(plt.FuncFormatter(currency_formatter))
@@ -186,22 +186,20 @@ def plot_results(cfg: Config):
     fig.savefig(cfg.plot_path, dpi=150, bbox_inches='tight')
     plt.close('all')
 
-    print(f"hw length of observed btc prices shown:", len(y_display_actual))
-    print(f"hw length of predicted btc prices shown:", len(y_pred_display_actual))
     print(f"Plot saved to {cfg.plot_path}")
-         
+
 def main():
     cfg = Config()
 
-    # X, y = load_data(cfg)
-    # log_trend = load_log_trend(cfg)
-    # residuals = y - log_trend(X.ravel())
+    X, y = load_data(cfg)
+    log_trend = load_log_trend(cfg)
+    residuals = y - log_trend(X.ravel())
 
-    # kernel = build_kernel()
-    # gp = fit_gp(X, residuals, kernel)
-    # X_pred, y_pred, y_std = predict_gp(gp, X, log_trend, cfg)
+    kernel = build_kernel()
+    gp = fit_gp(X, residuals, kernel)
+    X_pred, y_pred, y_std = predict_gp(gp, X, log_trend, cfg)
 
-    # save_outputs(gp, X_pred, y_pred, y_std, cfg)
+    save_outputs(gp, X_pred, y_pred, y_std, cfg)
     plot_results(cfg)
 
 if __name__ == '__main__':    
