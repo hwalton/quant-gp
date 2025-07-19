@@ -172,8 +172,11 @@ def plot_final_wealth_distribution(mu_seq, sigma_seq, current_log_price, optimal
     # Create smooth PDF plot
     plt.figure(figsize=(10, 6))
     
+    # Scale PDF values by 10^3 for readability
+    pdf_values_scaled = pdf_values * 1e3
+    
     # Plot only the smooth curve
-    plt.plot(wealth_range, pdf_values, label='Wealth Distribution', 
+    plt.plot(wealth_range, pdf_values_scaled, label='Wealth Distribution', 
              linewidth=2, color='skyblue')
     plt.axvline(cfg.initial_wealth, color='r', linestyle='--', 
                 label=f'Initial Wealth: ${cfg.initial_wealth:.0f}', linewidth=2)
@@ -183,7 +186,7 @@ def plot_final_wealth_distribution(mu_seq, sigma_seq, current_log_price, optimal
                 label=f'Most Probable Wealth: ${peak_wealth:.0f}', linewidth=2)
     
     plt.xlabel('Wealth ($)', fontsize=18)
-    plt.ylabel('Probability Density', fontsize=18)
+    plt.ylabel('Probability Density (×1E-3)', fontsize=18)
     plt.title('Wealth Distribution At Investment Horizon', fontsize=21)
     
     # Format x-axis as currency
@@ -211,7 +214,7 @@ def plot_final_wealth_distribution(mu_seq, sigma_seq, current_log_price, optimal
         x_data = wealth_range.min() + x_frac * (wealth_range.max() - wealth_range.min())
         # Find closest point in wealth_range
         closest_idx = np.argmin(np.abs(wealth_range - x_data))
-        corner_scores[corner_name] = pdf_values[closest_idx]
+        corner_scores[corner_name] = pdf_values_scaled[closest_idx]
     
     # Choose corner with lowest PDF value
     best_corner = min(corner_scores, key=corner_scores.get)
