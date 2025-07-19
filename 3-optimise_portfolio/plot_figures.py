@@ -2,7 +2,7 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.stats import norm, gaussian_kde
+from scipy.stats import norm
 from scipy import interpolate
 
 from config import Config

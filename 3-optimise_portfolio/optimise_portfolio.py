@@ -1,11 +1,9 @@
 import numpy as np
 import pandas as pd
 from scipy.stats import norm
-from itertools import product
 from skopt import gp_minimize
 from skopt.space import Real
 from skopt.utils import use_named_args
-from scipy.integrate import quad
 import time
 
 from config import Config
