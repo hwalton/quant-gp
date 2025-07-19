@@ -8,102 +8,6 @@ from scipy import interpolate
 from config import Config
 from get_utility_function import get_utility_func
 
-def plot_wealth_distribution(mu, sigma, current_log_price, optimal_weight, cfg: Config):
-    """Plot wealth distribution after 1 step"""
-    pred_log_price_vals = np.linspace(mu - 5 * sigma, mu + 5 * sigma, 1000)
-    pdf_vals = norm.pdf(pred_log_price_vals, loc=mu, scale=sigma)
-    
-    # Calculate wealth using vectorized operations
-    cash_portion = cfg.initial_wealth * (1 - optimal_weight)
-    btc_units = (cfg.initial_wealth * optimal_weight) / np.exp(current_log_price)
-    btc_value = btc_units * np.exp(pred_log_price_vals)
-    wealth_vals = cash_portion + btc_value
-    
-    # Calculate expected wealth
-    d_log_price = pred_log_price_vals[1] - pred_log_price_vals[0]
-    expected_wealth = np.sum(wealth_vals * pdf_vals * d_log_price)
-    
-    plt.figure(figsize=(10, 6))
-    plt.plot(wealth_vals, pdf_vals, label='Wealth PDF', linewidth=2)
-    plt.axvline(cfg.initial_wealth, color='r', linestyle='--', label='Initial Wealth', linewidth=2)
-    plt.axvline(expected_wealth, color='orange', linestyle=':', label=f'Expected Wealth: ${expected_wealth:.0f}', linewidth=2)
-    
-    plt.xlabel('Simulated Future Wealth ($)')
-    plt.ylabel('Probability Density')
-    plt.title('Wealth Distribution of Optimal Portfolio After 1 Step')
-    
-    # Fixed scale: always 0 to 2x initial wealth
-    # plt.xlim(0, 2 * cfg.initial_wealth)
-    
-    # Fix the x-axis formatting
-    ax = plt.gca()
-    ax.ticklabel_format(style='plain', axis='x')
-    
-    # Set clean tick spacing every $200
-    tick_spacing = 200
-    ax.set_xticks(np.arange(0, 2 * cfg.initial_wealth + tick_spacing, tick_spacing))
-    
-    # Format x-axis labels as integers
-    ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${int(x)}'))
-    
-    plt.grid(True, alpha=0.3)
-    plt.legend()
-    plt.tight_layout()
-    
-    # Add statistics text
-    plt.text(0.02, 0.98, f'Expected Wealth: ${expected_wealth:.2f}\nOptimal BTC: {optimal_weight:.1%}', 
-             transform=plt.gca().transAxes, verticalalignment='top', 
-             bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8))
-    
-    plt.savefig("wealth_distribution.png", dpi=150)
-    plt.close()
-
-def plot_utility_distribution(mu, sigma, current_log_price, optimal_weight, cfg: Config):
-    """Plot utility distribution after 1 step"""
-    pred_log_price_vals = np.linspace(mu - 5 * sigma, mu + 5 * sigma, 1000)
-    pdf_vals = norm.pdf(pred_log_price_vals, loc=mu, scale=sigma)
-    
-    utility = get_utility_func(cfg)
-    
-    # Calculate wealth using vectorized operations
-    cash_portion = cfg.initial_wealth * (1 - optimal_weight)
-    btc_units = (cfg.initial_wealth * optimal_weight) / np.exp(current_log_price)
-    btc_value = btc_units * np.exp(pred_log_price_vals)
-    wealth_vals = cash_portion + btc_value
-    
-    # Vectorized utility calculation - pass log wealth
-    utility_vals = utility(np.log(wealth_vals))
-    
-    # Calculate expected utility
-    d_log_price = pred_log_price_vals[1] - pred_log_price_vals[0]
-    expected_utility_val = np.sum(utility_vals * pdf_vals * d_log_price)
-    
-    # Initial wealth utility for reference
-    initial_utility = utility(np.log(cfg.initial_wealth))
-    
-    plt.figure(figsize=(10, 6))
-    plt.plot(utility_vals, pdf_vals, label='Utility PDF', linewidth=2, color='purple')
-    plt.axvline(initial_utility, color='r', linestyle='--', 
-                label=f'Initial Utility: {initial_utility:.3f}', linewidth=2)
-    plt.axvline(expected_utility_val, color='orange', linestyle=':', 
-                label=f'Expected Utility: {expected_utility_val:.3f}', linewidth=2)
-    
-    plt.xlabel('Utility Value')
-    plt.ylabel('Probability Density')
-    plt.title('Distribution of Portfolio Utility After 1 Step')
-    
-    plt.grid(True, alpha=0.3)
-    plt.legend()
-    plt.tight_layout()
-    
-    # Add statistics text
-    plt.text(0.02, 0.98, f'Expected Utility: {expected_utility_val:.4f}\nOptimal BTC: {optimal_weight:.1%}', 
-             transform=plt.gca().transAxes, verticalalignment='top', 
-             bbox=dict(boxstyle='round', facecolor='lightcyan', alpha=0.8))
-    
-    plt.savefig("utility_distribution.png", dpi=150)
-    plt.close()
-
 def plot_preference_curve(cfg: Config):
     """Plot the preference curve function"""
     from get_utility_function import get_preference_curve
@@ -462,24 +366,9 @@ def plot_allocation_vs_utility(mu_seq, sigma_seq, current_log_price, optimal_p, 
     
     print("Completed allocation vs utility plot")
 
-def plot_figures(mu, sigma, current_log_price, optimal_weight, cfg: Config):
-    """Generate all single-step visualization plots and save as PNG files"""
-    
-    plot_wealth_distribution(mu, sigma, current_log_price, optimal_weight, cfg)
-    print("Saved wealth_distribution.png")
-    
-    plot_utility_distribution(mu, sigma, current_log_price, optimal_weight, cfg)
-    print("Saved utility_distribution.png")
-    
-    plot_preference_curve(cfg)
-    print("Saved preference_curve.png")
-    
-    # Remove this line - we call it separately in main() with multi-step parameters
-    # plot_allocation_vs_utility(mu, sigma, current_log_price, optimal_weight, cfg)
-    # print("Saved allocation_vs_utility.png")
-
-def plot_final_distributions(mu_seq, sigma_seq, current_log_price, optimal_p, cfg: Config):
+def plot_figures(mu_seq, sigma_seq, current_log_price, optimal_p, cfg: Config):
     """Generate final distribution plots after all steps"""
+    plot_preference_curve(cfg)
     
     plot_final_wealth_distribution(mu_seq, sigma_seq, current_log_price, optimal_p, cfg)
     print("Saved final_wealth_distribution.png")

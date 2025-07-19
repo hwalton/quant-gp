@@ -9,7 +9,7 @@ from scipy.integrate import quad
 import time
 
 from config import Config
-from plot_figures import plot_figures, plot_final_distributions, plot_allocation_vs_utility
+from plot_figures import plot_figures, plot_allocation_vs_utility
 from get_utility_function import get_utility_func
 
 
@@ -255,20 +255,13 @@ def main():
     mid_time = time.time()
     elapsed_time = mid_time - start_time
     print(f"\nElapsed time for optimization: {elapsed_time:.2f} seconds")
-
-    # Generate single-step plots using first period data for visualization
-    mu_first_period = mu_seq[0]  # First period prediction
-    sigma_first_period = sigma_seq[0]  # First period uncertainty
-    optimal_weight_first_period = optimal_p[0]  # First period allocation
-    
-    plot_figures(mu_first_period, sigma_first_period, current_log_price, optimal_weight_first_period, cfg)
     
     # Generate the multi-step allocation plot - pass the objective function
     plot_allocation_vs_utility(mu_seq, sigma_seq, current_log_price, optimal_p, cfg, grid_points_per_dim, objective_func)
     print("Saved allocation_vs_utility.png")
     
     # Generate final distribution plots
-    plot_final_distributions(mu_seq, sigma_seq, current_log_price, optimal_p, cfg)
+    plot_figures(mu_seq, sigma_seq, current_log_price, optimal_p, cfg)
 
     # Print timing information
     end_time = time.time()
