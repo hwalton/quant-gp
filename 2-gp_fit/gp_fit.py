@@ -40,6 +40,13 @@ def load_log_trend(cfg: Config):
         return params[0] * np.log(params[1] * x + 1) + params[2]
     return trend
 
+def load_saved_predictions(cfg: Config):
+    """Load saved GP predictions from files"""
+    X_pred = np.load(cfg.x_pred_pkl)
+    y_pred = np.load(cfg.y_pred_pkl) 
+    y_std = np.load(cfg.y_std_pkl)
+    return X_pred, y_pred, y_std
+
 def build_kernel():
     return (
         C(1.0, (1e-3, 1e3)) * RBF(length_scale=10.0, length_scale_bounds=(1.0, 100.0)) +
@@ -48,7 +55,6 @@ def build_kernel():
                                              periodicity_bounds=(150, 300)) +
         WhiteKernel(noise_level=1, noise_level_bounds=(0.005, 200.0))
     )
-
 
 def fit_gp(X, residuals, kernel):
     gp = GaussianProcessRegressor(
@@ -79,9 +85,19 @@ def save_outputs(gp, X_pred, y_pred, y_std, cfg: Config):
     np.save(cfg.y_pred_pkl, y_pred)
     np.save(cfg.y_std_pkl, y_std)
 
-def plot_results(X, y, X_pred, y_pred, y_std, log_trend, cfg: Config):
+def plot_results(cfg: Config):
+    """Plot results using saved data - no need to refit GP"""
+    # Load original data
+    X, y = load_data(cfg)
+    
+    # Load log trend function
+    log_trend = load_log_trend(cfg)
+    
+    # Load saved predictions
+    X_pred, y_pred, y_std = load_saved_predictions(cfg)
+    
     # Only show the final half of the data for axis limits
-    half_idx = len(X) -260
+    half_idx = len(X) - 260
     X_display = X[half_idx:]
     y_display = y[half_idx:]
     
@@ -93,13 +109,13 @@ def plot_results(X, y, X_pred, y_pred, y_std, log_trend, cfg: Config):
     fig, ax = plt.subplots(figsize=(10, 6))
     
     # Plot all observed data points with smaller x's and lower zorder (behind axis)
-    ax.plot(X, y, 'kx', label='Observed BTC prices', markersize=3.5, zorder=1)
+    ax.plot(X, y, 'kx', label='Observed BTC prices', markersize=5, zorder=1)
     
     # Plot GP mean prediction, log trend fit, and confidence band over full range
-    ax.plot(X_pred_display, y_pred_display, 'b-', label='GP mean prediction', linewidth=2, zorder=2)
-    ax.plot(X_pred_display, log_trend(X_pred_display.ravel()), 'g--', label='Log trend fit', linewidth=2, zorder=2)
+    ax.plot(X_pred_display, y_pred_display, 'b-', label='Prediction Mean', linewidth=2, zorder=2)
+    # ax.plot(X_pred_display, log_trend(X_pred_display.ravel()), 'g--', label='Log trend fit', linewidth=2, zorder=2)
     ax.fill_between(X_pred_display.ravel(), y_pred_display - y_std_display, y_pred_display + y_std_display, 
-                    alpha=0.2, label='1σ confidence', color='skyblue', zorder=2)
+                    alpha=0.2, label='Prediction 1σ confidence Interval (68%)', color='skyblue', zorder=2)
     
     ax.set_xlabel('Weeks since start', fontsize=18)
     ax.set_ylabel('Log(BTC Price (USD))', fontsize=18)
@@ -122,20 +138,21 @@ def plot_results(X, y, X_pred, y_pred, y_std, log_trend, cfg: Config):
     fig.tight_layout()
     fig.savefig(cfg.plot_path)
     plt.close('all')
+    print(f"Plot saved to {cfg.plot_path}")
 
 def main():
     cfg = Config()
 
-    X, y = load_data(cfg)
-    log_trend = load_log_trend(cfg)
-    residuals = y - log_trend(X.ravel())
+    # X, y = load_data(cfg)
+    # log_trend = load_log_trend(cfg)
+    # residuals = y - log_trend(X.ravel())
 
-    kernel = build_kernel()
-    gp = fit_gp(X, residuals, kernel)
-    X_pred, y_pred, y_std = predict_gp(gp, X, log_trend, cfg)
+    # kernel = build_kernel()
+    # gp = fit_gp(X, residuals, kernel)
+    # X_pred, y_pred, y_std = predict_gp(gp, X, log_trend, cfg)
 
-    save_outputs(gp, X_pred, y_pred, y_std, cfg)
-    plot_results(X, y, X_pred, y_pred, y_std, log_trend, cfg)
+    # save_outputs(gp, X_pred, y_pred, y_std, cfg)
+    plot_results(cfg)
 
-if __name__ == '__main__':
+if __name__ == '__main__':    
     main()
