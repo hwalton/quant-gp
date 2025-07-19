@@ -42,6 +42,7 @@ def plot_preference_curve(cfg: Config):
 
     plt.savefig("preference_curve.png", dpi=150)
     plt.close()
+    print("Saved preference_curve.png")
 
 def plot_final_wealth_distribution(mu_seq, sigma_seq, current_log_price, optimal_p, cfg: Config):
     """Plot wealth distribution after all optimization steps"""
@@ -179,153 +180,7 @@ def plot_final_wealth_distribution(mu_seq, sigma_seq, current_log_price, optimal
     
     plt.savefig("final_wealth_distribution.png", dpi=150)
     plt.close()
-
-def plot_final_utility_distribution(mu_seq, sigma_seq, current_log_price, optimal_p, cfg: Config):
-    """Plot utility distribution after all optimization steps"""
-    utility = get_utility_func(cfg)
-    
-    # Handle both single value and array cases
-    if np.isscalar(optimal_p):
-        optimal_p = [optimal_p]
-        mu_seq = [mu_seq] if np.isscalar(mu_seq) else mu_seq[:1]
-        sigma_seq = [sigma_seq] if np.isscalar(sigma_seq) else sigma_seq[:1]
-    
-    T = len(optimal_p)
-    
-    # Use same grid calculation as in objective_numerical_integral
-    max_total_paths = 10000  # Smaller for plotting
-    grid_points_per_dim = max(3, int(max_total_paths**(1/T)))
-    
-    # Ensure we don't exceed the limit
-    actual_paths = grid_points_per_dim ** T
-    if actual_paths > max_total_paths:
-        grid_points_per_dim -= 1
-        actual_paths = grid_points_per_dim ** T
-    
-    # Build 1D grids for each future rebalance log-price x_t
-    grid_limits = [
-        np.linspace(mu_seq[t] - 4*sigma_seq[t], mu_seq[t] + 4*sigma_seq[t], grid_points_per_dim)
-        for t in range(T)
-    ]
-    
-    # Create meshgrid for all path combinations
-    grids = np.meshgrid(*grid_limits, indexing='ij')
-    all_paths = np.stack([g.ravel() for g in grids], axis=1)
-    n_paths = all_paths.shape[0]
-    
-    # Vectorized wealth calculation using log wealth approach
-    log_wealth = np.full(n_paths, np.log(cfg.initial_wealth))
-    x_prev = np.full(n_paths, current_log_price)
-    p_array = np.array(optimal_p)
-    
-    for t in range(T):
-        x_now = all_paths[:, t]
-        
-        # Calculate log returns
-        log_return = x_now - x_prev
-        
-        # Update log wealth using the formula
-        portfolio_return = (1 - p_array[t]) + p_array[t] * np.exp(log_return)
-        portfolio_return = np.maximum(portfolio_return, 1e-10)
-        
-        log_wealth += np.log(portfolio_return)
-        x_prev = x_now
-    
-    # Vectorized utility calculation - pass log wealth directly
-    utilities = utility(log_wealth)
-    
-    # Calculate probabilities for each path
-    mu_array = np.array([mu_seq[t] for t in range(T)])
-    sigma_array = np.array([sigma_seq[t] for t in range(T)])
-    log_probs = np.sum(norm.logpdf(all_paths, loc=mu_array, scale=sigma_array), axis=1)
-    probabilities = np.exp(log_probs)
-    
-    # Normalize probabilities
-    probabilities = probabilities / np.sum(probabilities)
-    
-    # Calculate expected utility
-    expected_utility_val = np.sum(utilities * probabilities)
-    initial_utility = utility(np.log(cfg.initial_wealth))
-    
-    # Create histogram-based PDF using smooth curve through midpoints
-    num_bins = min(50, len(np.unique(utilities)))  # Adaptive number of bins
-    
-    # Calculate weighted histogram
-    hist_counts, bin_edges = np.histogram(utilities, bins=num_bins, weights=probabilities, density=True)
-    
-    # Calculate bin midpoints
-    bin_midpoints = (bin_edges[:-1] + bin_edges[1:]) / 2
-    
-    # Filter out zero-count bins for smoother interpolation
-    non_zero_mask = hist_counts > 0
-    filtered_midpoints = bin_midpoints[non_zero_mask]
-    filtered_counts = hist_counts[non_zero_mask]
-    
-    # Create smooth curve through the midpoints using interpolation
-    if len(filtered_midpoints) > 3:  # Need at least 4 points for cubic interpolation
-        # Use cubic spline interpolation for smooth curve
-        utility_range = np.linspace(utilities.min(), utilities.max(), 1000)
-        
-        # Extend the range slightly for better interpolation at edges
-        interp_func = interpolate.interp1d(
-            filtered_midpoints, filtered_counts, 
-            kind='cubic', bounds_error=False, fill_value=0
-        )
-        pdf_values = interp_func(utility_range)
-        
-        # Ensure no negative values (can happen with cubic interpolation)
-        pdf_values = np.maximum(pdf_values, 0)
-        
-        # Normalize to ensure it's a proper PDF
-        if np.sum(pdf_values) > 0:
-            pdf_values = pdf_values / np.trapz(pdf_values, utility_range)
-        
-    else:
-        # Fallback to linear interpolation for few points
-        utility_range = np.linspace(utilities.min(), utilities.max(), 1000)
-        if len(filtered_midpoints) > 1:
-            interp_func = interpolate.interp1d(
-                filtered_midpoints, filtered_counts, 
-                kind='linear', bounds_error=False, fill_value=0
-            )
-            pdf_values = interp_func(utility_range)
-        else:
-            # Single point - create a narrow spike
-            pdf_values = np.zeros_like(utility_range)
-            closest_idx = np.argmin(np.abs(utility_range - filtered_midpoints[0]))
-            pdf_values[closest_idx] = filtered_counts[0]
-    
-    # Create smooth PDF plot
-    plt.figure(figsize=(10, 6))
-    
-    # Plot only the smooth curve
-    plt.plot(utility_range, pdf_values, label='Final Utility PDF', 
-             linewidth=2, color='purple')
-    
-    plt.axvline(initial_utility, color='r', linestyle='--', 
-                label=f'Initial Utility', linewidth=2)  # Removed numerical value
-    plt.axvline(expected_utility_val, color='orange', linestyle=':', 
-                label=f'Expected Utility', linewidth=2)  # Removed numerical value
-    
-    plt.xlabel('Final Utility Value')
-    plt.ylabel('Probability Density')
-    plt.title(f'Final Utility Distribution After All Steps ({cfg.preference_curve.replace("_", " ").title()})')
-    
-    # Remove numbers from x-axis (utility axis)
-    ax = plt.gca()
-    ax.set_xticklabels([])
-    
-    plt.grid(True, alpha=0.3)
-    plt.legend()
-    plt.tight_layout()
-    
-    # Remove utility values from statistics text
-    plt.text(0.02, 0.98, f'Optimal Strategy: {np.round(optimal_p, 2)}', 
-             transform=plt.gca().transAxes, verticalalignment='top', 
-             bbox=dict(boxstyle='round', facecolor='lightcyan', alpha=0.8))
-    
-    plt.savefig("final_utility_distribution.png", dpi=150)
-    plt.close()
+    print("Saved final_wealth_distribution.png")
 
 def plot_allocation_vs_utility(mu_seq, sigma_seq, current_log_price, optimal_p, cfg: Config, grid_points_per_dim, objective_func):
     """Plot first-step BTC allocation vs expected utility, keeping future allocations fixed"""
@@ -380,15 +235,9 @@ def plot_allocation_vs_utility(mu_seq, sigma_seq, current_log_price, optimal_p, 
     
     plt.savefig("allocation_vs_utility.png", dpi=150)
     plt.close()
-    
-    print("Completed allocation vs utility plot")
+    print("Saved allocation_vs_utility.png")
 
 def plot_figures(mu_seq, sigma_seq, current_log_price, optimal_p, cfg: Config):
     """Generate final distribution plots after all steps"""
-    plot_preference_curve(cfg)
+
     
-    plot_final_wealth_distribution(mu_seq, sigma_seq, current_log_price, optimal_p, cfg)
-    print("Saved final_wealth_distribution.png")
-    
-    plot_final_utility_distribution(mu_seq, sigma_seq, current_log_price, optimal_p, cfg)
-    print("Saved final_utility_distribution.png")
