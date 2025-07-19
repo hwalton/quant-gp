@@ -6,7 +6,6 @@ from scipy.stats import norm
 from scipy import interpolate
 
 from config import Config
-from get_utility_function import get_utility_func
 
 def plot_preference_curve(cfg: Config):
     """Plot the preference curve function"""
@@ -37,15 +36,24 @@ def plot_preference_curve(cfg: Config):
     ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{x:.1f}'))
     
     plt.grid(True, alpha=0.3)
-    plt.legend()
+    
+    # Auto-position legend to avoid lines
+    plt.legend(loc='best')
     plt.tight_layout()
 
-    plt.savefig("preference_curve.png", dpi=150)
+    plt.savefig("preference_curve.png", dpi=150, bbox_inches='tight')
     plt.close()
     print("Saved preference_curve.png")
 
 def plot_final_wealth_distribution(mu_seq, sigma_seq, current_log_price, optimal_p, cfg: Config):
     """Plot wealth distribution after all optimization steps"""
+    
+    # Handle both single value and array cases
+    if np.isscalar(optimal_p):
+        optimal_p = [optimal_p]
+        mu_seq = [mu_seq] if np.isscalar(mu_seq) else mu_seq[:1]
+        sigma_seq = [sigma_seq] if np.isscalar(sigma_seq) else sigma_seq[:1]
+    
     T = len(optimal_p)
     
     # Use same grid calculation as in objective_numerical_integral
@@ -170,15 +178,48 @@ def plot_final_wealth_distribution(mu_seq, sigma_seq, current_log_price, optimal
     ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${int(x)}'))
     
     plt.grid(True, alpha=0.3)
-    plt.legend()
-    plt.tight_layout()
     
-    # Add statistics text
-    plt.text(0.02, 0.98, f'Expected Final Wealth: ${expected_wealth:.2f}\nOptimal Strategy: {np.round(optimal_p, 2)}', 
-             transform=plt.gca().transAxes, verticalalignment='top', 
+    # Auto-position legend to avoid lines
+    plt.legend(loc='best')
+    
+    # Find best position for text box (avoid high density areas)
+    # Calculate which corner has lowest PDF values
+    corners = {
+        'upper left': (0.02, 0.98),
+        'upper right': (0.98, 0.98), 
+        'lower left': (0.02, 0.02),
+        'lower right': (0.98, 0.02)
+    }
+    
+    corner_scores = {}
+    for corner_name, (x_frac, y_frac) in corners.items():
+        # Convert fractional coordinates to data coordinates
+        x_data = wealth_range.min() + x_frac * (wealth_range.max() - wealth_range.min())
+        # Find closest point in wealth_range
+        closest_idx = np.argmin(np.abs(wealth_range - x_data))
+        corner_scores[corner_name] = pdf_values[closest_idx]
+    
+    # Choose corner with lowest PDF value
+    best_corner = min(corner_scores, key=corner_scores.get)
+    x_pos, y_pos = corners[best_corner]
+    
+    # Adjust text alignment based on position
+    if x_pos > 0.5:
+        ha = 'right'
+    else:
+        ha = 'left'
+        
+    if y_pos > 0.5:
+        va = 'top'
+    else:
+        va = 'bottom'
+    
+    plt.text(x_pos, y_pos, f'Expected Final Wealth: ${expected_wealth:.2f}\nOptimal Strategy: {np.round(optimal_p, 2)}', 
+             transform=ax.transAxes, verticalalignment=va, horizontalalignment=ha,
              bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8))
     
-    plt.savefig("final_wealth_distribution.png", dpi=150)
+    plt.tight_layout()
+    plt.savefig("final_wealth_distribution.png", dpi=150, bbox_inches='tight')
     plt.close()
     print("Saved final_wealth_distribution.png")
 
@@ -214,7 +255,7 @@ def plot_allocation_vs_utility(mu_seq, sigma_seq, current_log_price, optimal_p, 
     # Mark the optimal point (without showing utility value)
     optimal_utility = expected_utilities[np.argmin(np.abs(allocation_range - optimal_p[0]))]
     plt.plot(optimal_p[0] * 100, optimal_utility, 'ro', markersize=8, 
-             label=f'Optimal Point')  # Removed utility value
+             label=f'Optimal Point')
     
     plt.xlabel('First Step BTC Allocation (%)')
     plt.ylabel('Expected Utility')
@@ -225,19 +266,29 @@ def plot_allocation_vs_utility(mu_seq, sigma_seq, current_log_price, optimal_p, 
     ax.set_yticklabels([])
     
     plt.grid(True, alpha=0.3)
-    plt.legend()
-    plt.tight_layout()
     
-    # Remove utility values from statistics text
-    plt.text(0.02, 0.98, f'Optimal First Allocation: {optimal_p[0]:.1%}\nOptimal Strategy: {np.round(optimal_p, 2)}', 
-             transform=plt.gca().transAxes, verticalalignment='bottom', 
+    # Auto-position legend to avoid lines
+    plt.legend(loc='best')
+    
+    # Find best position for text box (avoid the curve)
+    # Check which side of the optimal point has more space
+    optimal_idx = np.argmin(np.abs(allocation_range - optimal_p[0]))
+    
+    # Calculate average utility on left and right sides of optimal
+    left_util = np.mean(expected_utilities[:optimal_idx]) if optimal_idx > 0 else expected_utilities[0]
+    right_util = np.mean(expected_utilities[optimal_idx:]) if optimal_idx < len(expected_utilities)-1 else expected_utilities[-1]
+    
+    # Place text box on the side with lower average utility (more space)
+    if left_util < right_util:
+        x_pos, ha = 0.02, 'left'
+    else:
+        x_pos, ha = 0.98, 'right'
+    
+    plt.text(x_pos, 0.98, f'Optimal First Allocation: {optimal_p[0]:.1%}\nOptimal Strategy: {np.round(optimal_p, 2)}', 
+             transform=ax.transAxes, verticalalignment='top', horizontalalignment=ha,
              bbox=dict(boxstyle='round', facecolor='lightgreen', alpha=0.8))
     
-    plt.savefig("allocation_vs_utility.png", dpi=150)
+    plt.tight_layout()
+    plt.savefig("allocation_vs_utility.png", dpi=150, bbox_inches='tight')
     plt.close()
     print("Saved allocation_vs_utility.png")
-
-def plot_figures(mu_seq, sigma_seq, current_log_price, optimal_p, cfg: Config):
-    """Generate final distribution plots after all steps"""
-
-    
