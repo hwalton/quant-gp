@@ -79,7 +79,7 @@ def get_preference_curve(cfg: Config):
     if cfg.preference_curve == 'step':
         def step_below(log_w):
             w = np.exp(log_w)
-            if w < 750:
+            if w < 1150:
                 return -1
             else:
                 return 0.9
