@@ -19,26 +19,33 @@ def plot_preference_curve(cfg: Config):
     # Vectorized preference curve calculation
     y_vals = preference_curve(x_vals)
     
+    # Convert ln(wealth) back to actual wealth for plotting
+    wealth_vals = np.exp(x_vals)
+    
     plt.figure(figsize=(10, 6))
-    plt.plot(x_vals, y_vals, label=f'{cfg.preference_curve.replace("_", " ").title()} Preference', 
+    plt.plot(wealth_vals, y_vals, label=f'{cfg.preference_curve.replace("_", " ").title()} Preference', 
                  color='blue', linewidth=2)
     
-    # Add reference lines
-    plt.axvline(np.log(cfg.initial_wealth), color='red', linestyle='--', 
-                label=f'Initial Wealth: {np.log(cfg.initial_wealth):.0f}', linewidth=2)
+    # Add reference lines (convert back to actual wealth)
+    plt.axvline(cfg.initial_wealth, color='red', linestyle='--', 
+                label=f'Initial Wealth: ${cfg.initial_wealth:.0f}', linewidth=2)
     
-    plt.xlabel('ln(Wealth ($))')
-    plt.ylabel('Preference Value')
-    plt.title(f'Preference Curve: {cfg.preference_curve.replace("_", " ").title()}')
+    # Set log10 scale for x-axis
+    plt.xscale('log')
     
-    # Format x-axis as currency
+    plt.xlabel('Wealth ($) [Log Scale]', fontsize=18)
+    plt.ylabel('Preference Value', fontsize=18)
+    plt.title(f'Preference Curve: {cfg.preference_curve.replace("_", " ").title()}', fontsize=21)
+    
+    # Format x-axis with powers of 10
     ax = plt.gca()
-    ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{x:.1f}'))
+    ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${int(x):,}'))
+    ax.tick_params(axis='both', which='major', labelsize=20)
     
-    plt.grid(True, alpha=0.3)
+    plt.grid(True, alpha=0.3, which='both')  # Show both major and minor grid lines
     
     # Auto-position legend to avoid lines
-    plt.legend(loc='best')
+    plt.legend(loc='best', fontsize=15)
     plt.tight_layout()
 
     plt.savefig("preference_curve.png", dpi=150, bbox_inches='tight')
@@ -173,20 +180,21 @@ def plot_final_wealth_distribution(mu_seq, sigma_seq, current_log_price, optimal
     plt.axvline(expected_wealth, color='orange', linestyle='--', 
                 label=f'Expected (Mean) Wealth: ${expected_wealth:.0f}', linewidth=2)
     plt.axvline(peak_wealth, color='green', linestyle='--', 
-                label=f'Most Likely Wealth: ${peak_wealth:.0f}', linewidth=2)
+                label=f'Most Probable Wealth: ${peak_wealth:.0f}', linewidth=2)
     
-    plt.xlabel('Wealth ($)')
-    plt.ylabel('Probability Density')
-    plt.title('Wealth Distribution At Investment Horizon')
+    plt.xlabel('Wealth ($)', fontsize=18)
+    plt.ylabel('Probability Density', fontsize=18)
+    plt.title('Wealth Distribution At Investment Horizon', fontsize=21)
     
     # Format x-axis as currency
     ax = plt.gca()
     ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${int(x)}'))
+    ax.tick_params(axis='both', which='major', labelsize=20)
     
     plt.grid(True, alpha=0.3)
     
     # Auto-position legend to avoid lines
-    plt.legend(loc='best')
+    plt.legend(loc='best', fontsize=15)
     
     # Find best position for text box (avoid high density areas)
     # Calculate which corner has lowest PDF values
@@ -220,9 +228,9 @@ def plot_final_wealth_distribution(mu_seq, sigma_seq, current_log_price, optimal
     else:
         va = 'bottom'
     
-    plt.text(x_pos, y_pos, f'Expected Final Wealth: ${expected_wealth:.2f}\nMost Likely Wealth: ${peak_wealth:.2f}\nOptimal Strategy: {np.round(optimal_p, 2)}', 
+    plt.text(x_pos, y_pos, f'Optimal Strategy: {np.round(optimal_p, 2)}', 
              transform=ax.transAxes, verticalalignment=va, horizontalalignment=ha,
-             bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8))
+             bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8), fontsize=13.5)
     
     plt.tight_layout()
     plt.savefig("final_wealth_distribution.png", dpi=150, bbox_inches='tight')
@@ -253,7 +261,7 @@ def plot_allocation_vs_utility(mu_seq, sigma_seq, current_log_price, optimal_p, 
     
     expected_utilities = np.array(expected_utilities)
     
-    plt.figure(figsize=(8, 6))
+    plt.figure(figsize=(10, 6))
     plt.plot(allocation_range * 100, expected_utilities, linewidth=2, color='green')
     plt.axvline(optimal_p[0] * 100, color='red', linestyle='--', 
                 label=f'Optimal First Allocation: {optimal_p[0]:.1%}', linewidth=2)
@@ -263,18 +271,19 @@ def plot_allocation_vs_utility(mu_seq, sigma_seq, current_log_price, optimal_p, 
     plt.plot(optimal_p[0] * 100, optimal_utility, 'ro', markersize=8, 
              label=f'Optimal Point')
     
-    plt.xlabel('First Step BTC Allocation (%)')
-    plt.ylabel('Expected Utility')
-    plt.title('Expected Utility vs First Step BTC Allocation')
+    plt.xlabel('First Step BTC Allocation (%)', fontsize=18)
+    plt.ylabel('Expected Utility', fontsize=18)
+    plt.title('Expected Utility vs First Step BTC Allocation', fontsize=21)
     
     # Remove numbers from y-axis (utility axis)
     ax = plt.gca()
     ax.set_yticklabels([])
+    ax.tick_params(axis='x', which='major', labelsize=20)
     
     plt.grid(True, alpha=0.3)
     
     # # Auto-position legend to avoid lines
-    # plt.legend(loc='best')
+    # plt.legend(loc='best', fontsize=15)
     
     # Find best position for text box (avoid the curve)
     # Check which side of the optimal point has more space
@@ -292,7 +301,7 @@ def plot_allocation_vs_utility(mu_seq, sigma_seq, current_log_price, optimal_p, 
     
     plt.text(x_pos, 0.98, f'Optimal Strategy: {np.round(optimal_p, 2)}', 
              transform=ax.transAxes, verticalalignment='top', horizontalalignment=ha,
-             bbox=dict(boxstyle='round', facecolor='lightgreen', alpha=0.8))
+             bbox=dict(boxstyle='round', facecolor='lightgreen', alpha=0.8), fontsize=13.5)
     
     plt.tight_layout()
     plt.savefig("allocation_vs_utility.png", dpi=150, bbox_inches='tight')
