@@ -141,33 +141,24 @@ def plot_results(cfg: Config):
     # Set axis limits to only show the final half
     ax.set_xlim(X_display[0], X_pred.ravel()[-1])
     
-    # Create custom x-axis labels based on timestamps
-    # Map week indices to actual years
-    def week_to_year_formatter(x, p):
-        if x < len(timestamps):
-            return pd.Timestamp(timestamps[int(x)]).strftime('%Y')
-        else:
-            # For predictions beyond observed data, extrapolate
-            weeks_beyond = x - len(timestamps) + 1
-            future_date = pd.Timestamp(timestamps[-1]) + pd.Timedelta(weeks=weeks_beyond)
-            return future_date.strftime('%Y')
-    
     # Set yearly ticks - find positions where year changes
     year_positions = []
     year_labels = []
     
-    # Start from display range
+    # Start from display range, but skip the first partial year
     for i in range(int(X_display[0]), int(X_pred.ravel()[-1]) + 1):
         if i < len(timestamps):
             current_year = pd.Timestamp(timestamps[i]).year
-            if i == int(X_display[0]) or (i > 0 and i < len(timestamps) and pd.Timestamp(timestamps[i-1]).year != current_year):
+            # Only add year ticks when we hit January 1st (or close to it)
+            current_date = pd.Timestamp(timestamps[i])
+            if current_date.month == 1 and current_date.day <= 7:  # First week of January
                 year_positions.append(i)
                 year_labels.append(str(current_year))
         else:
             # For future predictions, add yearly ticks
             weeks_beyond = i - len(timestamps) + 1
             future_date = pd.Timestamp(timestamps[-1]) + pd.Timedelta(weeks=weeks_beyond)
-            if not year_positions or future_date.year != int(year_labels[-1]):
+            if future_date.month == 1 and future_date.day <= 7:  # First week of January
                 year_positions.append(i)
                 year_labels.append(str(future_date.year))
     
@@ -198,7 +189,7 @@ def plot_results(cfg: Config):
     print(f"hw length of observed btc prices shown:", len(y_display_actual))
     print(f"hw length of predicted btc prices shown:", len(y_pred_display_actual))
     print(f"Plot saved to {cfg.plot_path}")
-        
+         
 def main():
     cfg = Config()
 
