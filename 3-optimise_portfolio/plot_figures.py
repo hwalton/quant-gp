@@ -168,8 +168,8 @@ def plot_preference_curve(cfg: Config):
     y_vals = [preference_curve(w) for w in x_vals]
     
     plt.figure(figsize=(10, 6))
-    plt.plot(x_vals, y_vals, label=f'{cfg.preference_curve.replace("_", " ").title()} Preference', 
-             color='blue', linewidth=2)
+    plt.semilogx(x_vals, y_vals, label=f'{cfg.preference_curve.replace("_", " ").title()} Preference', 
+                 color='blue', linewidth=2)
     
     # Add reference lines
     plt.axvline(cfg.initial_wealth, color='red', linestyle='--', 
@@ -189,7 +189,7 @@ def plot_preference_curve(cfg: Config):
     plt.xlabel('Wealth ($)')
     plt.ylabel('Preference Value')
     plt.title(f'Preference Curve: {cfg.preference_curve.replace("_", " ").title()}')
-    plt.xlim(0, 5100)
+    # plt.xlim(np.log10(100),np.log10(5100))
     
     # Format x-axis as currency
     ax = plt.gca()

@@ -32,7 +32,7 @@ import numpy as np
 #         return lambda w: (w**(1-gamma) - 1) / (1-gamma) if gamma != 1 else np.log(w)
 #     else:
 #         raise ValueError(f"Unsupported utility function: {cfg.utility_function}")
-def _fit_preference_curve(w, points, poly_degree=3):
+def _fit_preference_curve(w, points):
     """
     Helper function to fit straight lines through coordinate points
     
@@ -135,9 +135,8 @@ def get_preference_curve(cfg: Config):
         def coordinate_points(w):
             # Get coordinate points from config
             points = getattr(cfg, 'preference_points', [(600, -1), (1500,0.0), (5000, 0.5)])
-            poly_degree = getattr(cfg, 'preference_poly_degree', 3)
             
-            return _fit_preference_curve(w, points, poly_degree)
+            return _fit_preference_curve(w, points)
         
         return coordinate_points
 
