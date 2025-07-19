@@ -158,6 +158,10 @@ def plot_final_wealth_distribution(mu_seq, sigma_seq, current_log_price, optimal
             closest_idx = np.argmin(np.abs(wealth_range - filtered_midpoints[0]))
             pdf_values[closest_idx] = filtered_counts[0]
     
+    # Find the peak of the distribution (mode)
+    peak_idx = np.argmax(pdf_values)
+    peak_wealth = wealth_range[peak_idx]
+    
     # Create smooth PDF plot
     plt.figure(figsize=(10, 6))
     
@@ -166,8 +170,10 @@ def plot_final_wealth_distribution(mu_seq, sigma_seq, current_log_price, optimal
              linewidth=2, color='skyblue')
     plt.axvline(cfg.initial_wealth, color='r', linestyle='--', 
                 label=f'Initial Wealth: ${cfg.initial_wealth:.0f}', linewidth=2)
-    plt.axvline(expected_wealth, color='orange', linestyle=':', 
-                label=f'Mean Wealth: ${expected_wealth:.0f}', linewidth=2)
+    plt.axvline(expected_wealth, color='orange', linestyle='--', 
+                label=f'Expected (Mean) Wealth: ${expected_wealth:.0f}', linewidth=2)
+    plt.axvline(peak_wealth, color='green', linestyle='--', 
+                label=f'Most Likely Wealth: ${peak_wealth:.0f}', linewidth=2)
     
     plt.xlabel('Wealth ($)')
     plt.ylabel('Probability Density')
@@ -214,7 +220,7 @@ def plot_final_wealth_distribution(mu_seq, sigma_seq, current_log_price, optimal
     else:
         va = 'bottom'
     
-    plt.text(x_pos, y_pos, f'Expected Final Wealth: ${expected_wealth:.2f}\nOptimal Strategy: {np.round(optimal_p, 2)}', 
+    plt.text(x_pos, y_pos, f'Expected Final Wealth: ${expected_wealth:.2f}\nMost Likely Wealth: ${peak_wealth:.2f}\nOptimal Strategy: {np.round(optimal_p, 2)}', 
              transform=ax.transAxes, verticalalignment=va, horizontalalignment=ha,
              bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8))
     
