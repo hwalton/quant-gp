@@ -90,6 +90,12 @@ def plot_results(cfg: Config):
     # Load original data
     X, y = load_data(cfg)
     
+    # Load timestamps for axis labeling
+    df = pd.read_csv(cfg.data_path, sep=',')
+    df['timestamp'] = pd.to_datetime(df['timestamp'], unit='s')
+    df = df.sort_values(by='timestamp')
+    timestamps = df['timestamp'].values
+    
     # Load log trend function
     log_trend = load_log_trend(cfg)
     
@@ -126,7 +132,7 @@ def plot_results(cfg: Config):
     # Set log10 scale for y-axis
     ax.set_yscale('log')
     
-    ax.set_xlabel('Weeks since start', fontsize=18)
+    ax.set_xlabel('Date', fontsize=18)
     ax.set_ylabel('BTC Price (USD)', fontsize=18)
     ax.set_title('Gaussian Process Regression on BTC Weekly Prices', fontsize=21)
     ax.legend(loc='best', fontsize=15)
@@ -134,6 +140,40 @@ def plot_results(cfg: Config):
     
     # Set axis limits to only show the final half
     ax.set_xlim(X_display[0], X_pred.ravel()[-1])
+    
+    # Create custom x-axis labels based on timestamps
+    # Map week indices to actual years
+    def week_to_year_formatter(x, p):
+        if x < len(timestamps):
+            return pd.Timestamp(timestamps[int(x)]).strftime('%Y')
+        else:
+            # For predictions beyond observed data, extrapolate
+            weeks_beyond = x - len(timestamps) + 1
+            future_date = pd.Timestamp(timestamps[-1]) + pd.Timedelta(weeks=weeks_beyond)
+            return future_date.strftime('%Y')
+    
+    # Set yearly ticks - find positions where year changes
+    year_positions = []
+    year_labels = []
+    
+    # Start from display range
+    for i in range(int(X_display[0]), int(X_pred.ravel()[-1]) + 1):
+        if i < len(timestamps):
+            current_year = pd.Timestamp(timestamps[i]).year
+            if i == int(X_display[0]) or (i > 0 and i < len(timestamps) and pd.Timestamp(timestamps[i-1]).year != current_year):
+                year_positions.append(i)
+                year_labels.append(str(current_year))
+        else:
+            # For future predictions, add yearly ticks
+            weeks_beyond = i - len(timestamps) + 1
+            future_date = pd.Timestamp(timestamps[-1]) + pd.Timedelta(weeks=weeks_beyond)
+            if not year_positions or future_date.year != int(year_labels[-1]):
+                year_positions.append(i)
+                year_labels.append(str(future_date.year))
+    
+    # Set custom ticks and labels
+    ax.set_xticks(year_positions)
+    ax.set_xticklabels(year_labels)
     
     # Custom formatter to replace ,000 with k
     def currency_formatter(y, p):
@@ -154,8 +194,11 @@ def plot_results(cfg: Config):
     fig.tight_layout()
     fig.savefig(cfg.plot_path, dpi=150, bbox_inches='tight')
     plt.close('all')
+
+    print(f"hw length of observed btc prices shown:", len(y_display_actual))
+    print(f"hw length of predicted btc prices shown:", len(y_pred_display_actual))
     print(f"Plot saved to {cfg.plot_path}")
-    
+        
 def main():
     cfg = Config()
 
