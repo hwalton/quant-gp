@@ -33,13 +33,13 @@ def plot_preference_curve(cfg: Config):
     # Set log10 scale for x-axis
     plt.xscale('log')
     
-    plt.xlabel('Wealth ($)', fontsize=18)
+    plt.xlabel('Wealth (USD)', fontsize=18)
     plt.ylabel('Preference Value', fontsize=18)
     plt.title(f'Preference Curve: {cfg.preference_curve.replace("_", " ").title()}', fontsize=21)
     
     # Format x-axis with powers of 10
     ax = plt.gca()
-    ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${int(x):,}'))
+    ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{int(x):,}'))
     ax.tick_params(axis='both', which='major', labelsize=14)
     
     plt.grid(True, alpha=0.3, which='both')  # Show both major and minor grid lines
@@ -185,13 +185,13 @@ def plot_final_wealth_distribution(mu_seq, sigma_seq, current_log_price, optimal
     plt.axvline(peak_wealth, color='green', linestyle='--', 
                 label=f'Most Probable Wealth: ${peak_wealth:.0f}', linewidth=2)
     
-    plt.xlabel('Wealth ($)', fontsize=18)
+    plt.xlabel('Wealth (USD)', fontsize=18)
     plt.ylabel('Probability Density (×1E-3)', fontsize=18)
     plt.title(f'Wealth Distribution At Investment Horizon: {cfg.horizon_weeks} Weeks', fontsize=21)
 
     # Format x-axis as currency
     ax = plt.gca()
-    ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${int(x)}'))
+    ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{int(x)}'))
     ax.tick_params(axis='both', which='major', labelsize=14)
     
     plt.grid(True, alpha=0.3)
