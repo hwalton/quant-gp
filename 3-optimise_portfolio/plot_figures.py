@@ -162,16 +162,16 @@ def plot_final_wealth_distribution(mu_seq, sigma_seq, current_log_price, optimal
     plt.figure(figsize=(10, 6))
     
     # Plot only the smooth curve
-    plt.plot(wealth_range, pdf_values, label='Final Wealth PDF', 
+    plt.plot(wealth_range, pdf_values, label='Wealth Distribution', 
              linewidth=2, color='skyblue')
     plt.axvline(cfg.initial_wealth, color='r', linestyle='--', 
                 label=f'Initial Wealth: ${cfg.initial_wealth:.0f}', linewidth=2)
     plt.axvline(expected_wealth, color='orange', linestyle=':', 
-                label=f'Expected Wealth: ${expected_wealth:.0f}', linewidth=2)
+                label=f'Mean Wealth: ${expected_wealth:.0f}', linewidth=2)
     
-    plt.xlabel('Final Wealth ($)')
+    plt.xlabel('Wealth ($)')
     plt.ylabel('Probability Density')
-    plt.title('Final Wealth Distribution After All Steps')
+    plt.title('Wealth Distribution At Investment Horizon')
     
     # Format x-axis as currency
     ax = plt.gca()
@@ -247,7 +247,7 @@ def plot_allocation_vs_utility(mu_seq, sigma_seq, current_log_price, optimal_p, 
     
     expected_utilities = np.array(expected_utilities)
     
-    plt.figure(figsize=(10, 6))
+    plt.figure(figsize=(8, 6))
     plt.plot(allocation_range * 100, expected_utilities, linewidth=2, color='green')
     plt.axvline(optimal_p[0] * 100, color='red', linestyle='--', 
                 label=f'Optimal First Allocation: {optimal_p[0]:.1%}', linewidth=2)
@@ -259,7 +259,7 @@ def plot_allocation_vs_utility(mu_seq, sigma_seq, current_log_price, optimal_p, 
     
     plt.xlabel('First Step BTC Allocation (%)')
     plt.ylabel('Expected Utility')
-    plt.title('Final Expected Utility vs First Step BTC Allocation (Multi-Step)')
+    plt.title('Expected Utility vs First Step BTC Allocation')
     
     # Remove numbers from y-axis (utility axis)
     ax = plt.gca()
@@ -267,8 +267,8 @@ def plot_allocation_vs_utility(mu_seq, sigma_seq, current_log_price, optimal_p, 
     
     plt.grid(True, alpha=0.3)
     
-    # Auto-position legend to avoid lines
-    plt.legend(loc='best')
+    # # Auto-position legend to avoid lines
+    # plt.legend(loc='best')
     
     # Find best position for text box (avoid the curve)
     # Check which side of the optimal point has more space
@@ -284,7 +284,7 @@ def plot_allocation_vs_utility(mu_seq, sigma_seq, current_log_price, optimal_p, 
     else:
         x_pos, ha = 0.98, 'right'
     
-    plt.text(x_pos, 0.98, f'Optimal First Allocation: {optimal_p[0]:.1%}\nOptimal Strategy: {np.round(optimal_p, 2)}', 
+    plt.text(x_pos, 0.98, f'Optimal Strategy: {np.round(optimal_p, 2)}', 
              transform=ax.transAxes, verticalalignment='top', horizontalalignment=ha,
              bbox=dict(boxstyle='round', facecolor='lightgreen', alpha=0.8))
     
