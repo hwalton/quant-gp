@@ -77,7 +77,8 @@ def _fit_preference_curve(w, points):
 
 def get_preference_curve(cfg: Config):
     if cfg.preference_curve == 'step':
-        def step_below(w):
+        def step_below(log_w):
+            w = np.exp(log_w)
             if w < 750:
                 return -1
             else:
@@ -85,7 +86,8 @@ def get_preference_curve(cfg: Config):
         return step_below
 
     elif cfg.preference_curve == 'coordinate_points':
-        def coordinate_points(w):
+        def coordinate_points(log_w):
+            w= np.exp(log_w)  # Convert log back to wealth
             # Get coordinate points from config
             points = getattr(cfg, 'preference_points', [(100, -0.5), (10000, 0.1)])
             
@@ -94,7 +96,8 @@ def get_preference_curve(cfg: Config):
         return coordinate_points
 
     elif cfg.preference_curve == 'log_risk_averse':
-        def log_risk_averse(w):
+        def log_risk_averse(log_w):
+            w = np.exp(log_w)
             # Scale-invariant logarithmic preference
             # Maps log(w) to preference range [-0.9, 0.9]
             
@@ -110,7 +113,6 @@ def get_preference_curve(cfg: Config):
                 return 0.9   # Cap at maximum preference
             else:
                 # Logarithmic mapping: log(w) scaled to [-0.9, 0.9]
-                log_w = np.log(w)
                 log_min = np.log(w_min)
                 log_max = np.log(w_max)
                 
@@ -123,7 +125,8 @@ def get_preference_curve(cfg: Config):
         return log_risk_averse
     
     elif cfg.preference_curve == 'general_risk_level':
-        def general_risk_level(w):
+        def general_risk_level(log_w):
+            w = np.exp(log_w)
             # Power utility: w^(1-γ) where γ controls risk aversion
             gamma = getattr(cfg, 'gamma', 5)  # 1: risk tolerant, 5: risk averse
             

@@ -164,36 +164,25 @@ def plot_preference_curve(cfg: Config):
     preference_curve = get_preference_curve(cfg)
     
     # Always use wealth range from 0 to 5000 for preference curves
-    x_vals = np.linspace(0, 5100, 1000)
+    x_vals = np.linspace(np.log(100), np.log(5000), 1000)
     y_vals = [preference_curve(w) for w in x_vals]
     
     plt.figure(figsize=(10, 6))
-    plt.semilogx(x_vals, y_vals, label=f'{cfg.preference_curve.replace("_", " ").title()} Preference', 
+    plt.plot(x_vals, y_vals, label=f'{cfg.preference_curve.replace("_", " ").title()} Preference', 
                  color='blue', linewidth=2)
     
     # Add reference lines
-    plt.axvline(cfg.initial_wealth, color='red', linestyle='--', 
-                label=f'Initial Wealth: ${cfg.initial_wealth:.0f}', linewidth=2)
+    plt.axvline(np.log(cfg.initial_wealth), color='red', linestyle='--', 
+                label=f'Initial Wealth: {np.log(cfg.initial_wealth):.0f}', linewidth=2)
     
-    # Highlight interesting regions
-    if 'step' in cfg.preference_curve:
-        plt.axvline(1000, color='orange', linestyle=':', 
-                    label='Step Threshold: $1000', alpha=0.7)
-    elif cfg.preference_curve == 'target_seeking':
-        plt.axvline(2500, color='green', linestyle=':', 
-                    label='Target: $2500', alpha=0.7)
-    elif cfg.preference_curve == 'fast_climb_drop':
-        plt.axvline(2000, color='purple', linestyle=':', 
-                    label='Peak: $2000', alpha=0.7)
-    
-    plt.xlabel('Wealth ($)')
+    plt.xlabel('ln(Wealth ($))')
     plt.ylabel('Preference Value')
     plt.title(f'Preference Curve: {cfg.preference_curve.replace("_", " ").title()}')
     # plt.xlim(np.log10(100),np.log10(5100))
     
     # Format x-axis as currency
     ax = plt.gca()
-    ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${int(x)}'))
+    ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{x:.1f}'))
     
     plt.grid(True, alpha=0.3)
     plt.legend()
