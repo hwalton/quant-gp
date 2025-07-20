@@ -218,10 +218,9 @@ def coordinate_descent_refinement(initial_p, mu_seq, sigma_seq, current_log_pric
     
     return current_p, current_utility
 
-def main():
+def main(cfg: Config = Config()):
     start_time = time.time()
 
-    cfg = Config()
     mu_seq, sigma_seq, current_log_price = load_gp_predictions(cfg)
     
     # Number of rebalancing points = horizon_weeks / rebalance_every

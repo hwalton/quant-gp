@@ -50,8 +50,7 @@ def save_params(params, output_path):
     joblib.dump(params, output_path)
     print(f"Saved trend params to {output_path}")
 
-def main():
-    cfg = Config()
+def main(cfg: Config = Config()):
     if not os.path.exists(cfg.data_path):
         raise FileNotFoundError(f"Data file not found: {cfg.data_path}")
     

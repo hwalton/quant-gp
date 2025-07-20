@@ -581,9 +581,7 @@ def plot_full_dataset_results(cfg: Config):
     print(f"  Residuals std: {(y - log_trend(X)).std():.4f}")
     print(f"  Prediction range: {X_pred.min():.0f} to {X_pred.max():.0f} weeks")
 
-def main():
-    cfg = Config()
-
+def main(cfg: Config = Config()):
     X, y = load_data(cfg)
     log_trend = load_log_trend(cfg)
     residuals = y - log_trend(X)  # SAME AS SKLEARN VERSION
