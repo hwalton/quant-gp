@@ -20,7 +20,8 @@ def main():
 
     steps = [
         ('1-log-fit/log-fit.py', '1-log-fit'),
-        ('2-gp_fit/gp_fit.py', '2-gp_fit'),
+        # ('2-gp_fit/gp_fit.py', '2-gp_fit'),
+        ('2-gp_fit/online_gp_fit.py', '2-gp_fit'),
         ('3-optimise_portfolio/optimise_portfolio.py', '3-optimise_portfolio'),
     ]
 

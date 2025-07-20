@@ -48,7 +48,7 @@ def plot_preference_curve(cfg: Config):
     plt.legend(loc='best', fontsize=15)
     plt.tight_layout()
 
-    plt.savefig("preference_curve.png", dpi=150, bbox_inches='tight')
+    plt.savefig("preference_curve.png", dpi=300, bbox_inches='tight')
     plt.close()
     print("Saved preference_curve.png")
 
@@ -239,7 +239,7 @@ def plot_final_wealth_distribution(mu_seq, sigma_seq, current_log_price, optimal
     )
     
     plt.tight_layout()
-    plt.savefig("final_wealth_distribution.png", dpi=150, bbox_inches='tight')
+    plt.savefig("final_wealth_distribution.png", dpi=300, bbox_inches='tight')
     plt.close()
     print("Saved final_wealth_distribution.png")
 
@@ -313,6 +313,6 @@ def plot_allocation_vs_utility(mu_seq, sigma_seq, current_log_price, optimal_p, 
     )
 
     plt.tight_layout()
-    plt.savefig("allocation_vs_utility.png", dpi=150, bbox_inches='tight')
+    plt.savefig("allocation_vs_utility.png", dpi=300, bbox_inches='tight')
     plt.close()
     print("Saved allocation_vs_utility.png")

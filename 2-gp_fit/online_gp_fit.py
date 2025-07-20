@@ -28,9 +28,9 @@ class Config:
     points_into_future: int = 48*3
     y_limit: tuple =(4, 18)
     learning_rate: float = 0.1
-    training_iter: int = 500  # Reduce from 500 to prevent parameter drift
+    training_iter: int = 200  # Reduce from 500 to prevent parameter drift
     online_iter: int = 20  # Fewer iterations for online updates
-    inducing_points: int = 100  # Increase from 100  # Number of inducing points
+    inducing_points: int = 150  # Increase from 100  # Number of inducing points
 
 class VariationalGPModel(ApproximateGP):
     def __init__(self, inducing_points):
@@ -489,13 +489,13 @@ def plot_results(cfg: Config):
     ax.set_ylim(y_min * 0.9, y_max * 1.1)
     
     fig.tight_layout()
-    fig.savefig(cfg.plot_path, dpi=150, bbox_inches='tight')
+    fig.savefig(cfg.plot_path, dpi=300, bbox_inches='tight')
     plt.close('all')
 
     print(f"Variational GP plot saved to {cfg.plot_path}")
 
 def plot_full_dataset_results(cfg: Config):
-    """Plot GP results showing the FULL dataset for debugging"""
+    """Plot GP results showing the FULL dataset in log space only, with extended log trend"""
     # Load original data
     X, y = load_data(cfg)
     
@@ -505,16 +505,13 @@ def plot_full_dataset_results(cfg: Config):
     df = df.sort_values(by='timestamp')
     timestamps = df['timestamp'].values
     
-    # assert each timetamp is 1 week (604800 seconds) after the last
-    assert np.all(np.diff(timestamps) == pd.Timedelta(weeks=1)), "Timestamps are not weekly spaced"
-
     # Load log trend function
     log_trend = load_log_trend(cfg)
     
     # Load saved predictions
     X_pred, y_pred, y_std = load_saved_predictions(cfg)
     
-    # FIX: Flatten X_pred if it's 2D (sklearn GP returns 2D arrays)
+    # Flatten arrays if needed
     if X_pred.ndim > 1:
         X_pred = X_pred.flatten()
     if y_pred.ndim > 1:
@@ -522,27 +519,27 @@ def plot_full_dataset_results(cfg: Config):
     if y_std.ndim > 1:
         y_std = y_std.flatten()
 
-    # Convert log prices back to actual prices for plotting
-    y_actual = np.exp(y)
-    y_pred_actual = np.exp(y_pred)
-    y_std_upper_actual = np.exp(y_pred + y_std)
-    y_std_lower_actual = np.exp(y_pred - y_std)
+    # Extend log trend to match prediction range
+    X_trend = X_pred
+    y_trend = log_trend(X_trend)
 
-    # Create larger figure
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(15, 12))
+    # Create figure
+    fig, ax = plt.subplots(figsize=(16, 9))
     
-    # TOP PLOT: Full dataset in log space (easier to see residuals)
-    ax1.plot(X, y, 'kx', label='Historical BTC Log Prices', markersize=3, alpha=0.7, zorder=1)
-    ax1.plot(X, log_trend(X), 'r-', label='Log Trend', linewidth=2, zorder=2)
-    ax1.plot(X_pred, y_pred, 'b-', label='GP (Log Space)', linewidth=2, zorder=3)
-    ax1.fill_between(X_pred, y_pred - y_std, y_pred + y_std, 
+    # Plot observed data
+    ax.plot(X, y, 'kx', label='Historical BTC Log Prices', markersize=3, alpha=0.7, zorder=1)
+    # Plot extended log trend
+    ax.plot(X_trend, y_trend, 'r-', label='Log Trend', linewidth=2, zorder=2)
+    # Plot GP prediction
+    ax.plot(X_pred, y_pred, 'b-', label='GP (Log Space)', linewidth=2, zorder=3)
+    ax.fill_between(X_pred, y_pred - y_std, y_pred + y_std, 
                     alpha=0.2, label='GP 1σ (Log Space)', color='skyblue', zorder=2)
     
-    ax1.set_xlabel('Time (weeks)', fontsize=14)
-    ax1.set_ylabel('Log BTC Price', fontsize=14)
-    ax1.set_title('GP Fit: Full Dataset (Log Space) - DEBUGGING VIEW', fontsize=16)
-    ax1.legend(loc='best', fontsize=12)
-    ax1.grid(True, alpha=0.3)
+    ax.set_xlabel('Time (weeks)', fontsize=14)
+    ax.set_ylabel('Log BTC Price', fontsize=14)
+    ax.set_title('GP Fit: Full Dataset (Log Space)', fontsize=16)
+    ax.legend(loc='best', fontsize=12)
+    ax.grid(True, alpha=0.3)
     
     # Set x-axis to show years
     year_positions = []
@@ -553,43 +550,18 @@ def plot_full_dataset_results(cfg: Config):
             year_positions.append(i)
             year_labels.append(str(year))
     
-    ax1.set_xticks(year_positions)
-    ax1.set_xticklabels(year_labels)
-    ax1.tick_params(axis='both', which='major', labelsize=12)
-    
-    # BOTTOM PLOT: Full dataset in actual price space
-    ax2.plot(X, y_actual, 'kx', label='Historical BTC Prices', markersize=3, alpha=0.7, zorder=1)
-    ax2.plot(X_pred, y_pred_actual, 'b-', label='GP Mean', linewidth=2, zorder=2)
-    ax2.fill_between(X_pred, y_std_lower_actual, y_std_upper_actual, 
-                    alpha=0.2, label='GP 1σ Confidence', color='skyblue', zorder=2)
-    
-    ax2.set_yscale('log')
-    ax2.set_xlabel('Time (weeks)', fontsize=14)
-    ax2.set_ylabel('BTC Price (USD)', fontsize=14)
-    ax2.set_title('GP Fit: Full Dataset (Actual Prices)', fontsize=16)
-    ax2.legend(loc='best', fontsize=12)
-    ax2.grid(True, alpha=0.3, which='both')
-    
-    # Custom formatter for price axis
-    def currency_formatter(y, p):
-        if y >= 1000:
-            return f'{int(y/1000)}k'
-        else:
-            return f'{int(y)}'
-    
-    ax2.yaxis.set_major_formatter(plt.FuncFormatter(currency_formatter))
-    ax2.set_xticks(year_positions)
-    ax2.set_xticklabels(year_labels)
-    ax2.tick_params(axis='both', which='major', labelsize=12)
+    ax.set_xticks(year_positions)
+    ax.set_xticklabels(year_labels)
+    ax.tick_params(axis='both', which='major', labelsize=12)
     
     plt.tight_layout()
     
     # Save with different name
     full_plot_path = cfg.plot_path.replace('.png', '_full_dataset.png')
-    fig.savefig(full_plot_path, dpi=150, bbox_inches='tight')
+    fig.savefig(full_plot_path, dpi=300, bbox_inches='tight')
     plt.close('all')
 
-    print(f"Full dataset plot saved to {full_plot_path}")
+    print(f"Full dataset log-space plot saved to {full_plot_path}")
     
     # Print some diagnostics
     print(f"\nDiagnostics:")
@@ -611,12 +583,6 @@ def main():
     save_outputs(gp, X_pred, y_pred, y_std, cfg)
     plot_results(cfg)           # Original zoomed plot
     plot_full_dataset_results(cfg)  # New full dataset plot
-    
-    # # Demonstrate variational online updates
-    # online_update_example(cfg)
-    
-    # # Show timing comparison
-    # timing_comparison_example(cfg)
 
 if __name__ == '__main__':    
     main()
