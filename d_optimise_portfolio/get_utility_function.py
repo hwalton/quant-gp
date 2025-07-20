@@ -165,6 +165,11 @@ def get_preference_curve(cfg: Config):
             return result
         
         return max_expected_wealth
+    elif cfg.preference_curve == 'identity':
+        def identity(log_w):
+            log_w = np.asarray(log_w)
+            return np.tanh(log_w)
+        return identity
 
 def get_utility_func(cfg: Config):
     def utility_func(log_w):

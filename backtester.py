@@ -22,11 +22,11 @@ from d_optimise_portfolio.config import Config as OptimiseConfig
 class Config:
     data_path: str = os.path.join(PROJECT_ROOT, 'a_data', 'bitcoin_combined_weekly_data.csv')
     starting_wealth: float = 1000
-    start_datetime: str = "2018-01-01"  # Start date for backtesting
-    end_datetime: str = "2018-06-01"    # End date for backtesting
+    start_datetime: str = "2020-06-01"  # Start date for backtesting
+    end_datetime: str = "2021-06-01"    # End date for backtesting
     
     # Portfolio optimization config
-    preference_curve: str = 'max_expected_wealth'
+    preference_curve: str = 'identity'
     horizon_weeks: int = 1
     rebalance_every: int = 1
     optimisation_method: str = 'bayesian_with_refinement'
@@ -269,13 +269,16 @@ def main(cfg: Config = Config()):
         btc_prices.append(current_price)
         
         # Print progress
-        if (current_idx - start_idx) % 13 == 0:  # Every ~quarter
+        if (current_idx - start_idx) % 4 == 0:  # Every ~quarter
             print(f"Date: {current_date.strftime('%Y-%m-%d')} | "
                   f"BTC: ${current_price:8.2f} | "
                   f"Allocation: {optimal_btc_allocation:5.1%} | "
                   f"Strategic: ${strategic_wealth:8.0f} | "
                   f"Cash: ${cash_wealth:8.0f} | "
                   f"BTC: ${btc_wealth:8.0f}")
+        
+        if (len(residuals) % 50 == 0):  # Every 50 points
+            gp_model.periodic_full_retrain()
     
     # Final results
     final_strategic = strategic_wealths[-1]

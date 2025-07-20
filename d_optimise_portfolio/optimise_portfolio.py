@@ -140,7 +140,7 @@ def run_bayesian_optimisation(cfg, mu_seq, sigma_seq, current_log_price, months,
         n_initial_points=10,
         acq_func="EI", # EI, PI, or LCB
         random_state=42,
-        verbose=True
+        verbose=False
     )
 
     optimal_p = np.array(result.x)
