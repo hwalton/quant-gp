@@ -25,6 +25,6 @@ class Config:
     horizon_weeks: int = 4*2
     rebalance_every: int = 4  # weeks
 
-    optimisation_method = ['bayesian', 'bayesian_with_refinement'][1]
+    optimisation_method: str = ['bayesian', 'bayesian_with_refinement'][1]  # Add type annotation
     
     n_calls_optimiser: int = 15  # Number of calls to the optimiser
