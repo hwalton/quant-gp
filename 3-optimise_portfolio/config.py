@@ -7,7 +7,7 @@ class Config:
     y_std_pkl: str = '../2-gp_fit/y_std.npy'
     price_csv: str = '../0-data/bitcoin_combined_weekly_data.csv'
     initial_wealth: float = 600
-    preference_curve: str = ['step', 'coordinate_points', 'log_risk_averse', 'general_risk_level'][1]
+    preference_curve: str = ['step', 'coordinate_points', 'log_risk_averse', 'general_risk_level', 'max_expected_wealth'][1]
     gamma: float = 5  # Only used if utility_function is 'crra'
     step_threshold: float = 1100
     step_steepness: float = 100.0

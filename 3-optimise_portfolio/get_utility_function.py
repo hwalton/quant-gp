@@ -129,6 +129,43 @@ def get_preference_curve(cfg: Config):
         
         return general_risk_level
 
+    elif cfg.preference_curve == 'max_expected_wealth':
+        def max_expected_wealth(log_w):
+            log_w = np.asarray(log_w)
+            w = np.exp(log_w)
+            
+            # Define wealth range for mapping
+            w_min = getattr(cfg, 'log_w_min', 10)
+            w_max = getattr(cfg, 'log_w_max', 100000)
+            
+            # Vectorized conditions
+            result = np.full_like(w, -0.9, dtype=float)
+            
+            # Very negative preference for zero/negative wealth
+            result[w <= 0] = -0.9
+            
+            # Very negative for wealth below minimum
+            result[w <= w_min] = -0.9
+            
+            # Cap at maximum preference
+            result[w >= w_max] = 0.9
+            
+            # Logarithmic mapping for values in between
+            mask = (w > w_min) & (w < w_max)
+            if np.any(mask):
+                log_min = np.log(w_min)
+                log_max = np.log(w_max)
+                
+                # Normalize log(w) to [0, 1]
+                normalized = (log_w[mask] - log_min) / (log_max - log_min)
+                
+                # Map to [-0.9, 0.9] range
+                result[mask] = -0.9 + 1.8 * normalized
+            
+            return result
+        
+        return max_expected_wealth
+
 def get_utility_func(cfg: Config):
     def utility_func(log_w):
         log_w = np.asarray(log_w)
