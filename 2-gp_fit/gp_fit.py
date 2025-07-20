@@ -188,6 +188,107 @@ def plot_results(cfg: Config):
 
     print(f"Plot saved to {cfg.plot_path}")
 
+def plot_full_dataset_results(cfg: Config):
+    """Plot GP results showing the FULL dataset for debugging"""
+    # Load original data
+    X, y = load_data(cfg)
+    
+    # Load timestamps for axis labeling
+    df = pd.read_csv(cfg.data_path, sep=',')
+    df['timestamp'] = pd.to_datetime(df['timestamp'], unit='s')
+    df = df.sort_values(by='timestamp')
+    timestamps = df['timestamp'].values
+    
+    # Load log trend function
+    log_trend = load_log_trend(cfg)
+    
+    # Load saved predictions
+    X_pred, y_pred, y_std = load_saved_predictions(cfg)
+    
+    # FIX: Flatten X_pred if it's 2D (sklearn GP returns 2D arrays)
+    if X_pred.ndim > 1:
+        X_pred = X_pred.flatten()
+    if y_pred.ndim > 1:
+        y_pred = y_pred.flatten()
+    if y_std.ndim > 1:
+        y_std = y_std.flatten()
+
+    # Convert log prices back to actual prices for plotting
+    y_actual = np.exp(y)
+    y_pred_actual = np.exp(y_pred)
+    y_std_upper_actual = np.exp(y_pred + y_std)
+    y_std_lower_actual = np.exp(y_pred - y_std)
+
+    # Create larger figure
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(15, 12))
+    
+    # TOP PLOT: Full dataset in log space (easier to see residuals)
+    ax1.plot(X, y, 'kx', label='Historical BTC Log Prices', markersize=3, alpha=0.7, zorder=1)
+    ax1.plot(X, log_trend(X), 'r-', label='Log Trend', linewidth=2, zorder=2)
+    ax1.plot(X_pred, y_pred, 'b-', label='GP (Log Space)', linewidth=2, zorder=3)
+    ax1.fill_between(X_pred, y_pred - y_std, y_pred + y_std, 
+                    alpha=0.2, label='GP 1σ (Log Space)', color='skyblue', zorder=2)
+    
+    ax1.set_xlabel('Time (weeks)', fontsize=14)
+    ax1.set_ylabel('Log BTC Price', fontsize=14)
+    ax1.set_title('GP Fit: Full Dataset (Log Space) - DEBUGGING VIEW', fontsize=16)
+    ax1.legend(loc='best', fontsize=12)
+    ax1.grid(True, alpha=0.3)
+    
+    # Set x-axis to show years
+    year_positions = []
+    year_labels = []
+    for i in range(0, len(timestamps), 52):  # Every ~52 weeks (1 year)
+        if i < len(timestamps):
+            year = pd.Timestamp(timestamps[i]).year
+            year_positions.append(i)
+            year_labels.append(str(year))
+    
+    ax1.set_xticks(year_positions)
+    ax1.set_xticklabels(year_labels)
+    ax1.tick_params(axis='both', which='major', labelsize=12)
+    
+    # BOTTOM PLOT: Full dataset in actual price space
+    ax2.plot(X, y_actual, 'kx', label='Historical BTC Prices', markersize=3, alpha=0.7, zorder=1)
+    ax2.plot(X_pred, y_pred_actual, 'b-', label='GP Mean', linewidth=2, zorder=2)
+    ax2.fill_between(X_pred, y_std_lower_actual, y_std_upper_actual, 
+                    alpha=0.2, label='GP 1σ Confidence', color='skyblue', zorder=2)
+    
+    ax2.set_yscale('log')
+    ax2.set_xlabel('Time (weeks)', fontsize=14)
+    ax2.set_ylabel('BTC Price (USD)', fontsize=14)
+    ax2.set_title('GP Fit: Full Dataset (Actual Prices)', fontsize=16)
+    ax2.legend(loc='best', fontsize=12)
+    ax2.grid(True, alpha=0.3, which='both')
+    
+    # Custom formatter for price axis
+    def currency_formatter(y, p):
+        if y >= 1000:
+            return f'{int(y/1000)}k'
+        else:
+            return f'{int(y)}'
+    
+    ax2.yaxis.set_major_formatter(plt.FuncFormatter(currency_formatter))
+    ax2.set_xticks(year_positions)
+    ax2.set_xticklabels(year_labels)
+    ax2.tick_params(axis='both', which='major', labelsize=12)
+    
+    plt.tight_layout()
+    
+    # Save with different name
+    full_plot_path = cfg.plot_path.replace('.png', '_full_dataset.png')
+    fig.savefig(full_plot_path, dpi=150, bbox_inches='tight')
+    plt.close('all')
+
+    print(f"Full dataset plot saved to {full_plot_path}")
+    
+    # Print some diagnostics
+    print(f"\nDiagnostics:")
+    print(f"  Data range: {X.min():.0f} to {X.max():.0f} weeks")
+    print(f"  Log price range: {y.min():.2f} to {y.max():.2f}")
+    print(f"  Residuals std: {(y - log_trend(X)).std():.4f}")
+    print(f"  Prediction range: {X_pred.min():.0f} to {X_pred.max():.0f} weeks")
+
 def main():
     cfg = Config()
 
@@ -201,6 +302,7 @@ def main():
 
     save_outputs(gp, X_pred, y_pred, y_std, cfg)
     plot_results(cfg)
+    plot_full_dataset_results(cfg)
 
 if __name__ == '__main__':    
     main()
