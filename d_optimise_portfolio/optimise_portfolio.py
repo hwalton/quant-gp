@@ -6,9 +6,16 @@ from skopt.space import Real
 from skopt.utils import use_named_args
 import time
 
-from config import Config
-from plot_figures import plot_allocation_vs_utility, plot_preference_curve, plot_final_wealth_distribution
-from get_utility_function import get_utility_func
+import os
+import sys
+
+# Add the project root to sys.path
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(PROJECT_ROOT)
+
+from d_optimise_portfolio.config import Config
+from d_optimise_portfolio.plot_figures import plot_allocation_vs_utility, plot_preference_curve, plot_final_wealth_distribution
+from d_optimise_portfolio.get_utility_function import get_utility_func
 
 
 def calculate_grid_parameters(T, max_total_paths=1000000):

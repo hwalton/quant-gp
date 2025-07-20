@@ -5,11 +5,20 @@ import numpy as np
 from scipy.stats import norm
 from scipy import interpolate
 
-from config import Config
+import os
+import sys
+
+# Add the project root to sys.path
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(PROJECT_ROOT)
+
+from d_optimise_portfolio.config import Config
+from d_optimise_portfolio.get_utility_function import get_preference_curve
+
+PLOT_PATH = os.path.join(PROJECT_ROOT, 'd_optimise_portfolio')
 
 def plot_preference_curve(cfg: Config):
     """Plot the preference curve function"""
-    from get_utility_function import get_preference_curve
     
     preference_curve = get_preference_curve(cfg)
     
@@ -48,7 +57,7 @@ def plot_preference_curve(cfg: Config):
     plt.legend(loc='best', fontsize=15)
     plt.tight_layout()
 
-    plt.savefig("preference_curve.png", dpi=300, bbox_inches='tight')
+    plt.savefig(os.path.join(PLOT_PATH, "preference_curve.png"), dpi=300, bbox_inches='tight')
     plt.close()
     print("Saved preference_curve.png")
 
@@ -239,7 +248,7 @@ def plot_final_wealth_distribution(mu_seq, sigma_seq, current_log_price, optimal
     )
     
     plt.tight_layout()
-    plt.savefig("final_wealth_distribution.png", dpi=300, bbox_inches='tight')
+    plt.savefig(os.path.join(PLOT_PATH, "final_wealth_distribution.png"), dpi=300, bbox_inches='tight')
     plt.close()
     print("Saved final_wealth_distribution.png")
 
@@ -313,6 +322,6 @@ def plot_allocation_vs_utility(mu_seq, sigma_seq, current_log_price, optimal_p, 
     )
 
     plt.tight_layout()
-    plt.savefig("allocation_vs_utility.png", dpi=300, bbox_inches='tight')
+    plt.savefig(os.path.join(PLOT_PATH, "allocation_vs_utility.png"), dpi=300, bbox_inches='tight')
     plt.close()
     print("Saved allocation_vs_utility.png")

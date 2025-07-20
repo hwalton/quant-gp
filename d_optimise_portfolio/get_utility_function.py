@@ -1,4 +1,4 @@
-from config import Config
+from d_optimise_portfolio.config import Config
 import numpy as np
 
 def _fit_preference_curve(w, points):
