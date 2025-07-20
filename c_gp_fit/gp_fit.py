@@ -62,10 +62,24 @@ def build_kernel():
         WhiteKernel(noise_level=1, noise_level_bounds=(0.005, 200.0))
     )
 
-def fit_gp(X, residuals, kernel):
+def build_fixed_kernel(
+    rbf_lengthscale=10.0,
+    rbf_constant=1.0,
+    periodic_lengthscale=10.0,
+    periodic_period=208.0,
+    periodic_constant=1.0,
+    noise_level=1.0
+):
+    return (
+        C(rbf_constant) * RBF(length_scale=rbf_lengthscale) +
+        C(periodic_constant) * ExpSineSquared(length_scale=periodic_lengthscale, periodicity=periodic_period) +
+        WhiteKernel(noise_level=noise_level)
+    )
+
+def fit_gp(cfg, X, residuals, kernel):
     gp = GaussianProcessRegressor(
         kernel=kernel,
-        optimizer="fmin_l_bfgs_b",
+        optimizer=[None, "fmin_l_bfgs_b"][0],
         n_restarts_optimizer=3,
         normalize_y=True
     )
