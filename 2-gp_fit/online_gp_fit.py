@@ -28,9 +28,9 @@ class Config:
     points_into_future: int = 48*3
     y_limit: tuple =(4, 18)
     learning_rate: float = 0.1
-    training_iter: int = 100
+    training_iter: int = 500  # Reduce from 500 to prevent parameter drift
     online_iter: int = 20  # Fewer iterations for online updates
-    inducing_points: int = 100  # Number of inducing points
+    inducing_points: int = 100  # Increase from 100  # Number of inducing points
 
 class VariationalGPModel(ApproximateGP):
     def __init__(self, inducing_points):
@@ -38,13 +38,14 @@ class VariationalGPModel(ApproximateGP):
         variational_strategy = VariationalStrategy(self, inducing_points, variational_distribution, learn_inducing_locations=True)
         super(VariationalGPModel, self).__init__(variational_strategy)
         
-        # Use ConstantMean for zero-mean residuals (like sklearn GP with normalize_y=True)
+        # Use ConstantMean for zero-mean residuals
         self.mean_module = ConstantMean()
         
-        # EXACT SAME KERNEL STRUCTURE AS SKLEARN VERSION
-        # sklearn: C(1.0) * RBF(10.0) + C(1.0) * ExpSineSquared(10.0, 208.0) + WhiteKernel
-        self.rbf_kernel = ScaleKernel(RBFKernel())  # C * RBF
-        self.periodic_kernel = ScaleKernel(PeriodicKernel())  # C * ExpSineSquared
+        # Use GPyTorch's stable kernels instead of custom implementation
+        self.rbf_kernel = ScaleKernel(RBFKernel())
+        
+        # Try using PeriodicKernel - it's similar to ExpSineSquared but more stable
+        self.periodic_kernel = ScaleKernel(PeriodicKernel())
         
         # Add kernels (sklearn uses +)
         self.covar_module = self.rbf_kernel + self.periodic_kernel
@@ -53,7 +54,7 @@ class VariationalGPModel(ApproximateGP):
         mean_x = self.mean_module(x)
         covar_x = self.covar_module(x)
         return gpytorch.distributions.MultivariateNormal(mean_x, covar_x)
-
+    
 class OnlineVariationalGP:
     def __init__(self, cfg: Config):
         self.cfg = cfg
@@ -73,8 +74,8 @@ class OnlineVariationalGP:
         self.train_x = torch.tensor(X.reshape(-1, 1), dtype=torch.float32)
         self.train_y = torch.tensor(y, dtype=torch.float32)
         
-        # Initialize inducing points uniformly across the input range
-        inducing_points = torch.linspace(X.min(), X.max(), self.cfg.inducing_points).unsqueeze(-1)
+        # Better inducing point placement - use quantiles
+        inducing_points = torch.tensor(np.quantile(X, np.linspace(0, 1, self.cfg.inducing_points))).unsqueeze(-1).float()
         
         # Initialize model
         self.model = VariationalGPModel(inducing_points)
@@ -84,27 +85,34 @@ class OnlineVariationalGP:
         print(f"  Std: {y.std():.4f}")  
         print(f"  Range: [{y.min():.4f}, {y.max():.4f}]")
         
-        # MATCH SKLEARN KERNEL INITIALIZATION
-        # sklearn: RBF(length_scale=10.0, length_scale_bounds=(1.0, 100.0))
-        self.model.rbf_kernel.base_kernel.lengthscale = 10.0
-        self.model.rbf_kernel.outputscale = 1.0  # C(1.0)
+        # MANUALLY SET KERNEL PARAMETERS - approximate sklearn
+        print(f"\nSetting kernel parameters to approximate sklearn GP:")
+        print(f"  RBF: outputscale={0.618**2:.3f}, lengthscale={3.8}")
+        print(f"  Periodic: outputscale={0.641**2:.3f}, lengthscale={0.86}, period={187}")
+        print(f"  Noise: {0.0142:.4f}")
         
-        # sklearn: ExpSineSquared(length_scale=10.0, periodicity=208.0, ...)  
-        self.model.periodic_kernel.base_kernel.lengthscale = 10.0
-        self.model.periodic_kernel.base_kernel.period_length = 208.0  # 4 years
-        self.model.periodic_kernel.outputscale = 1.0  # C(1.0)
+        # RBF kernel - match sklearn exactly
+        self.model.rbf_kernel.base_kernel.lengthscale = 3.8
+        self.model.rbf_kernel.outputscale = 0.618**2
         
-        # sklearn: WhiteKernel(noise_level=1, noise_level_bounds=(0.005, 200.0))
-        self.likelihood.noise = 1.0
+        # Periodic kernel - approximate ExpSineSquared
+        self.model.periodic_kernel.base_kernel.lengthscale = 0.86
+        self.model.periodic_kernel.base_kernel.period_length = 187.0
+        self.model.periodic_kernel.outputscale = 0.641**2
         
-        # Lower learning rate for stability
+        # Noise level - match sklearn exactly
+        self.likelihood.noise = 0.0142
+        
+        # Setup optimizer
         self.optimizer = torch.optim.Adam([
             {'params': self.model.parameters()},
             {'params': self.likelihood.parameters()},
-        ], lr=0.01)
-        
+        ], lr=0.01)  # Higher learning rate for initial training
+    
         self.mll = VariationalELBO(self.likelihood, self.model, num_data=len(y))
         
+        # Train the model
+        print(f"\nStarting variational training with {self.cfg.training_iter} iterations...")
         self._train_model_full()
         
         initial_training_time = time.time() - start_time
@@ -178,6 +186,13 @@ class OnlineVariationalGP:
         self.model.train()
         self.likelihood.train()
         
+        # # Optionally freeze kernel parameters to match sklearn exactly
+        # for param in self.model.rbf_kernel.parameters():
+        #     param.requires_grad = False
+        # for param in self.model.periodic_kernel.parameters():
+        #     param.requires_grad = False
+        # self.likelihood.noise.requires_grad = False
+    
         for i in range(self.cfg.training_iter):
             self.optimizer.zero_grad()
             output = self.model(self.train_x)
@@ -186,7 +201,8 @@ class OnlineVariationalGP:
             self.optimizer.step()
             
             if (i + 1) % 25 == 0:
-                print(f'  Iter {i+1:3d}/{self.cfg.training_iter} - Loss: {loss.item():.3f}')
+                noise_level = self.likelihood.noise.item()
+                print(f'  Iter {i+1:3d}/{self.cfg.training_iter} - Loss: {loss.item():.3f} - Noise: {noise_level:.4f}')
     
     def _train_model_online(self):
         """Quick training for online updates"""
@@ -479,7 +495,7 @@ def plot_results(cfg: Config):
     print(f"Variational GP plot saved to {cfg.plot_path}")
 
 def plot_full_dataset_results(cfg: Config):
-    """Plot variational GP results showing the FULL dataset for debugging"""
+    """Plot GP results showing the FULL dataset for debugging"""
     # Load original data
     X, y = load_data(cfg)
     
@@ -489,11 +505,22 @@ def plot_full_dataset_results(cfg: Config):
     df = df.sort_values(by='timestamp')
     timestamps = df['timestamp'].values
     
+    # assert each timetamp is 1 week (604800 seconds) after the last
+    assert np.all(np.diff(timestamps) == pd.Timedelta(weeks=1)), "Timestamps are not weekly spaced"
+
     # Load log trend function
     log_trend = load_log_trend(cfg)
     
     # Load saved predictions
     X_pred, y_pred, y_std = load_saved_predictions(cfg)
+    
+    # FIX: Flatten X_pred if it's 2D (sklearn GP returns 2D arrays)
+    if X_pred.ndim > 1:
+        X_pred = X_pred.flatten()
+    if y_pred.ndim > 1:
+        y_pred = y_pred.flatten()
+    if y_std.ndim > 1:
+        y_std = y_std.flatten()
 
     # Convert log prices back to actual prices for plotting
     y_actual = np.exp(y)
@@ -507,13 +534,13 @@ def plot_full_dataset_results(cfg: Config):
     # TOP PLOT: Full dataset in log space (easier to see residuals)
     ax1.plot(X, y, 'kx', label='Historical BTC Log Prices', markersize=3, alpha=0.7, zorder=1)
     ax1.plot(X, log_trend(X), 'r-', label='Log Trend', linewidth=2, zorder=2)
-    ax1.plot(X_pred, y_pred, 'b-', label='Variational GP (Log Space)', linewidth=2, zorder=3)
+    ax1.plot(X_pred, y_pred, 'b-', label='GP (Log Space)', linewidth=2, zorder=3)
     ax1.fill_between(X_pred, y_pred - y_std, y_pred + y_std, 
-                    alpha=0.2, label='Variational GP 1σ (Log Space)', color='skyblue', zorder=2)
+                    alpha=0.2, label='GP 1σ (Log Space)', color='skyblue', zorder=2)
     
     ax1.set_xlabel('Time (weeks)', fontsize=14)
     ax1.set_ylabel('Log BTC Price', fontsize=14)
-    ax1.set_title('Variational GP Fit: Full Dataset (Log Space) - DEBUGGING VIEW', fontsize=16)
+    ax1.set_title('GP Fit: Full Dataset (Log Space) - DEBUGGING VIEW', fontsize=16)
     ax1.legend(loc='best', fontsize=12)
     ax1.grid(True, alpha=0.3)
     
@@ -532,14 +559,14 @@ def plot_full_dataset_results(cfg: Config):
     
     # BOTTOM PLOT: Full dataset in actual price space
     ax2.plot(X, y_actual, 'kx', label='Historical BTC Prices', markersize=3, alpha=0.7, zorder=1)
-    ax2.plot(X_pred, y_pred_actual, 'b-', label='Variational GP Mean', linewidth=2, zorder=2)
+    ax2.plot(X_pred, y_pred_actual, 'b-', label='GP Mean', linewidth=2, zorder=2)
     ax2.fill_between(X_pred, y_std_lower_actual, y_std_upper_actual, 
-                    alpha=0.2, label='Variational GP 1σ Confidence', color='skyblue', zorder=2)
+                    alpha=0.2, label='GP 1σ Confidence', color='skyblue', zorder=2)
     
     ax2.set_yscale('log')
     ax2.set_xlabel('Time (weeks)', fontsize=14)
     ax2.set_ylabel('BTC Price (USD)', fontsize=14)
-    ax2.set_title('Variational GP Fit: Full Dataset (Actual Prices)', fontsize=16)
+    ax2.set_title('GP Fit: Full Dataset (Actual Prices)', fontsize=16)
     ax2.legend(loc='best', fontsize=12)
     ax2.grid(True, alpha=0.3, which='both')
     
