@@ -18,8 +18,8 @@ from gpytorch.variational import CholeskyVariationalDistribution, VariationalStr
 
 @dataclass(frozen=True)
 class Config:
-    data_path: str ='../0-data/bitcoin_combined_weekly_data.csv'
-    log_pkl_path: str ='../1-log-fit/log_trend_params.pkl'
+    data_path: str ='../a-data/bitcoin_combined_weekly_data.csv'
+    log_pkl_path: str ='../b-log-fit/log_trend_params.pkl'
     gp_pkl_path: str ='variational_gp_model.pth'
     x_pred_pkl: str ='X_pred.npy'
     y_pred_pkl: str ='y_pred.npy'

@@ -19,10 +19,10 @@ def main():
     project_root = os.path.dirname(os.path.abspath(__file__))
 
     steps = [
-        ('1-log-fit/log-fit.py', '1-log-fit'),
-        # ('2-gp_fit/gp_fit.py', '2-gp_fit'),
-        ('2-gp_fit/online_gp_fit.py', '2-gp_fit'),
-        ('3-optimise_portfolio/optimise_portfolio.py', '3-optimise_portfolio'),
+        ('b-log-fit/log-fit.py', 'b-log-fit'),
+        # ('c-gp_fit/gp_fit.py', 'c-gp_fit'),
+        ('c-gp_fit/online_gp_fit.py', 'c-gp_fit'),
+        ('d-optimise_portfolio/optimise_portfolio.py', 'd-optimise_portfolio'),
     ]
 
     for script_rel, work_dir_rel in steps:

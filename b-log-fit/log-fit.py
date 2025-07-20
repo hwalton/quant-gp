@@ -9,7 +9,7 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class Config:
-    data_path: str = '../0-data/bitcoin_combined_weekly_data.csv'
+    data_path: str = '../a-data/bitcoin_combined_weekly_data.csv'
     output_pkl: str = 'log_trend_params.pkl'
     cycle_length: int = 208
 
