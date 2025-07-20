@@ -26,6 +26,7 @@ class Config:
     plot_path: str = os.path.join(PROJECT_ROOT, 'c_gp_fit', 'gp_output.png')
     points_into_future: int = 48*3
     y_limit: tuple =(4, 18)
+    hyperparameter_optimisation: bool = False
 
 def load_data(cfg: Config):
     df = pd.read_csv(cfg.data_path, sep=',')
@@ -66,7 +67,7 @@ def build_fixed_kernel(
     rbf_lengthscale=10.0,
     rbf_constant=1.0,
     periodic_lengthscale=10.0,
-    periodic_period=208.0,
+    periodic_period=218.0,
     periodic_constant=1.0,
     noise_level=1.0
 ):
@@ -76,10 +77,16 @@ def build_fixed_kernel(
         WhiteKernel(noise_level=noise_level)
     )
 
-def fit_gp(cfg, X, residuals, kernel):
+def fit_gp(X, residuals, kernel, opt=True):
+
+    if opt == True:
+        optimiser = 'fmin_l_bfgs_b'
+    else:
+        optimiser = None
+
     gp = GaussianProcessRegressor(
         kernel=kernel,
-        optimizer=[None, "fmin_l_bfgs_b"][0],
+        optimizer=optimiser,
         n_restarts_optimizer=3,
         normalize_y=True
     )
@@ -216,7 +223,7 @@ def main():
     residuals = y - log_trend(X.ravel())
 
     kernel = build_kernel()
-    gp = fit_gp(X, residuals, kernel)
+    gp = fit_gp(X, residuals, kernel, cfg.hyperparameter_optimisation)
     X_pred, y_pred, y_std = predict_gp(gp, X, log_trend, cfg)
 
     save_outputs(gp, X_pred, y_pred, y_std, cfg)

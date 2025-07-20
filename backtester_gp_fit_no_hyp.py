@@ -145,7 +145,7 @@ def main(cfg: Config = Config()):
         rbf_lengthscale=10.0,
         rbf_constant=1.0,
         periodic_lengthscale=10.0,
-        periodic_period=208.0,
+        periodic_period=298.0,
         periodic_constant=1.0,
         noise_level=1.0
     )
@@ -169,7 +169,7 @@ def main(cfg: Config = Config()):
 
         # Fit GP with fixed kernel (no hyperparameter optimization)
         try:
-            gp_model = fit_gp(X_current, residuals, kernel)
+            gp_model = fit_gp(X_current, residuals, kernel, opt=False)
         except Exception as e:
             print(f"Warning: GP fitting failed at {current_date}: {e}")
             optimal_btc_allocation = 0.5
