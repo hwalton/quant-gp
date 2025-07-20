@@ -2,6 +2,7 @@ venv
 *.png
 *.pkl
 *.npy
+*.pth
 
 !objective_function*.png
 

@@ -1,11 +1,11 @@
 import pandas as pd
-import numpy as np
-from datetime import datetime
+import os
 
 # File paths
-WEEKLY_DATA = 'BitcoinHistory.csv'
-MINUTE_DATA = 'btcusd_1-min_data.csv'
-OUTPUT_FILE = 'bitcoin_combined_weekly_data.csv'
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+WEEKLY_DATA = os.path.join(PROJECT_ROOT, 'a_data', 'BitcoinHistory.csv')
+MINUTE_DATA = os.path.join(PROJECT_ROOT, 'a_data', 'btcusd_1-min_data.csv')
+OUTPUT_FILE = os.path.join(PROJECT_ROOT, 'a_data', 'bitcoin_combined_weekly_data.csv')
 
 def process_weekly_data(file_path):
     """Process daily Bitcoin data and resample to weekly (Sunday close)"""

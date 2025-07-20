@@ -6,9 +6,20 @@ from skopt.space import Real
 from skopt.utils import use_named_args
 import time
 
-from config import Config
-from plot_figures import plot_allocation_vs_utility, plot_preference_curve, plot_final_wealth_distribution
-from get_utility_function import get_utility_func
+import os
+import sys
+
+# Add the project root to sys.path
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(PROJECT_ROOT)
+
+from utils.utils import load_data
+
+from d_optimise_portfolio.config import Config
+from d_optimise_portfolio.plot_figures import plot_allocation_vs_utility, plot_preference_curve, plot_final_wealth_distribution
+from d_optimise_portfolio.get_utility_function import get_utility_func
+
+VERBOSE = False
 
 
 def calculate_grid_parameters(T, max_total_paths=1000000):
@@ -131,7 +142,7 @@ def run_bayesian_optimisation(cfg, mu_seq, sigma_seq, current_log_price, months,
         n_initial_points=10,
         acq_func="EI", # EI, PI, or LCB
         random_state=42,
-        verbose=True
+        verbose=VERBOSE
     )
 
     optimal_p = np.array(result.x)
@@ -140,8 +151,9 @@ def run_bayesian_optimisation(cfg, mu_seq, sigma_seq, current_log_price, months,
     return optimal_p, max_utility, result
 
 def coordinate_descent_refinement(initial_p, mu_seq, sigma_seq, current_log_price, cfg, grid_points_per_dim, max_recursive_calls=3):
-    """More efficient refinement using coordinate descent for high-dimensional problems"""
-    print("Using coordinate descent refinement...")
+    
+    if VERBOSE:
+        print("Using coordinate descent refinement...")
     
     refinement_deltas = np.array([-0.1, -0.075, -0.05, -0.025, 0, 0.025, 0.05, 0.075, 0.1])
     
@@ -149,7 +161,8 @@ def coordinate_descent_refinement(initial_p, mu_seq, sigma_seq, current_log_pric
     current_p = np.array(initial_p)
     current_utility = objective_func(initial_p, mu_seq, sigma_seq, current_log_price, cfg, grid_points_per_dim)
     
-    print(f"Starting utility: {current_utility:.6f}")
+    if VERBOSE:
+        print(f"Starting utility: {current_utility:.6f}")
     
     overall_improvement = False
     found_edge_improvement = False
@@ -159,7 +172,8 @@ def coordinate_descent_refinement(initial_p, mu_seq, sigma_seq, current_log_pric
         best_delta = 0
         best_utility_for_dim = current_utility
         
-        print(f"\nOptimizing dimension {dim} (current value: {current_p[dim]:.3f})")
+        if VERBOSE:
+            print(f"\nOptimizing dimension {dim} (current value: {current_p[dim]:.3f})")
         
         # Try each delta for this dimension
         for delta in refinement_deltas:
@@ -186,22 +200,27 @@ def coordinate_descent_refinement(initial_p, mu_seq, sigma_seq, current_log_pric
             if abs(best_delta) == 0.1:
                 found_edge_improvement = True
             
-            print(f"  Improved dimension {dim}: {current_p[dim]:.3f} -> {current_utility:.6f} (delta: {best_delta:+.3f})")
+            if VERBOSE:
+                print(f"  Improved dimension {dim}: {current_p[dim]:.3f} -> {current_utility:.6f} (delta: {best_delta:+.3f})")
         else:
-            print(f"  No improvement for dimension {dim}")
+            if VERBOSE:
+                print(f"  No improvement for dimension {dim}")
     
     if overall_improvement:
         improvement = current_utility - objective_func(initial_p, mu_seq, sigma_seq, current_log_price, cfg, grid_points_per_dim)
-        print(f"\nOverall improvement: {improvement:.6f}")
-        print(f"Final allocation: {np.round(current_p, 3)}")
+        if VERBOSE:
+            print(f"\nOverall improvement: {improvement:.6f}")
+            print(f"Final allocation: {np.round(current_p, 3)}")
     else:
-        print("\nNo improvement found - Bayesian optimization result was already locally optimal")
+        if VERBOSE:
+            print("\nNo improvement found - Bayesian optimization result was already locally optimal")
     
     # If we found improvement at the edge (±0.1), recursively call for further refinement
     if found_edge_improvement and max_recursive_calls > 0:
-        print(f"\nFound edge improvement (±0.1 delta), recursively searching further...")
-        print(f"Recursive calls remaining: {max_recursive_calls}")
-        
+        if VERBOSE:
+            print(f"\nFound edge improvement (±0.1 delta), recursively searching further...")
+            print(f"Recursive calls remaining: {max_recursive_calls}")
+
         # Recursively call with current_p as the new starting point
         final_p, final_utility = coordinate_descent_refinement(
             current_p, mu_seq, sigma_seq, current_log_price, cfg, grid_points_per_dim, 
@@ -211,10 +230,9 @@ def coordinate_descent_refinement(initial_p, mu_seq, sigma_seq, current_log_pric
     
     return current_p, current_utility
 
-def main():
+def main(cfg: Config = Config()):
     start_time = time.time()
 
-    cfg = Config()
     mu_seq, sigma_seq, current_log_price = load_gp_predictions(cfg)
     
     # Number of rebalancing points = horizon_weeks / rebalance_every

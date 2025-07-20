@@ -4,27 +4,24 @@ import pandas as pd
 import numpy as np
 from scipy.optimize import curve_fit
 import joblib
-import os
 from dataclasses import dataclass
 
+import os
+import sys
+
+# Add the project root to sys.path
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(PROJECT_ROOT)
+from utils.utils import load_data
+
+DATA_PATH = os.path.join(PROJECT_ROOT, 'a_data', 'bitcoin_combined_weekly_data.csv')
+OUTPUT_PKL = os.path.join(PROJECT_ROOT, 'b_log_fit', 'log_trend_params.pkl')
+                          
 @dataclass(frozen=True)
 class Config:
-    data_path: str = '../0-data/bitcoin_combined_weekly_data.csv'
-    output_pkl: str = 'log_trend_params.pkl'
+    data_path: str = DATA_PATH
+    output_pkl: str = OUTPUT_PKL
     cycle_length: int = 208
-
-def load_data(cfg: Config):
-    df = pd.read_csv(cfg.data_path, sep=',')
-    print("Columns:", df.columns.tolist())
-    df['timestamp'] = pd.to_datetime(df['timestamp'], unit='s')
-    df = df.sort_values(by='timestamp')
-    y_all = np.log(df['price'].astype(float).values)
-    
-    # Use all data instead of trimming to cycles
-    y = y_all
-    X = np.arange(len(y))
-    
-    return X, y
 
 def log_func(x, a, b, c):
     z = b * x + 1
@@ -46,8 +43,7 @@ def save_params(params, output_path):
     joblib.dump(params, output_path)
     print(f"Saved trend params to {output_path}")
 
-def main():
-    cfg = Config()
+def main(cfg: Config = Config()):
     if not os.path.exists(cfg.data_path):
         raise FileNotFoundError(f"Data file not found: {cfg.data_path}")
     
