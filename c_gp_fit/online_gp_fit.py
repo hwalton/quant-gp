@@ -207,7 +207,8 @@ class OnlineVariationalGP:
         # for param in self.model.periodic_kernel.parameters():
         #     param.requires_grad = False
         # self.likelihood.noise.requires_grad = False
-    
+
+        print(f"HW DEBUG: length of train_y: {len(self.train_y)}")
         for i in range(self.cfg.training_iter):
             self.optimizer.zero_grad()
             output = self.model(self.train_x)
@@ -424,10 +425,8 @@ def online_update_example(cfg: Config):
     except FileNotFoundError:
         print("No existing model found. Please run main() first to create initial model.")
 
-def plot_results(cfg: Config):
+def plot_results(cfg: Config, X, y):
     """Plot variational GP results"""
-    # Load original data
-    X, y = load_data(cfg)
     
     # Load timestamps for axis labeling
     df = pd.read_csv(cfg.data_path, sep=',')
@@ -496,11 +495,8 @@ def plot_results(cfg: Config):
 
     print(f"Variational GP plot saved to {cfg.plot_path}")
 
-def plot_full_dataset_results(cfg: Config):
+def plot_full_dataset_results(cfg: Config, X, y):
     """Plot GP results showing the FULL dataset in log space only, with extended log trend"""
-    # Load original data
-    X, y = load_data(cfg)
-    
     # Load timestamps for axis labeling
     df = pd.read_csv(cfg.data_path, sep=',')
     df['timestamp'] = pd.to_datetime(df['timestamp'], unit='s')
@@ -581,8 +577,8 @@ def main(cfg: Config = Config()):
     X_pred, y_pred, y_std = predict_gp(gp, X, log_trend, cfg)
 
     save_outputs(gp, X_pred, y_pred, y_std, cfg)
-    plot_results(cfg)           # Original zoomed plot
-    plot_full_dataset_results(cfg)  # New full dataset plot
+    plot_results(cfg, X, y)           # Original zoomed plot
+    plot_full_dataset_results(cfg, X, y)  # New full dataset plot
 
 if __name__ == '__main__':    
     main()

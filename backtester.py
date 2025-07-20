@@ -14,7 +14,7 @@ sys.path.append(PROJECT_ROOT)
 
 from utils.utils import load_data
 from b_log_fit.log_fit import fit_log_trend, log_func, Config as LogFitConfig
-from c_gp_fit.online_gp_fit import OnlineVariationalGP, Config as OnlineGPConfig
+from c_gp_fit.online_gp_fit import OnlineVariationalGP, Config as OnlineGPConfig, plot_full_dataset_results
 from d_optimise_portfolio.optimise_portfolio import load_gp_predictions, objective_func, run_bayesian_optimisation, coordinate_descent_refinement, calculate_grid_parameters
 from d_optimise_portfolio.config import Config as OptimiseConfig
 
@@ -71,6 +71,51 @@ def optimize_portfolio_for_current_state(current_log_price, mu_seq, sigma_seq, c
             bayesian_p, mu_seq, sigma_seq, current_log_price, opt_config, grid_points_per_dim)
     
     return optimal_p[0]  # Return only the first step allocation
+
+def plot_backtesting_gp_state(gp_model, X_current, y_current, current_date, cfg):
+    """Plot current GP state during backtesting"""
+    import matplotlib.pyplot as plt
+    
+    # Make predictions for plotting
+    X_plot = np.linspace(X_current.min(), X_current.max() + 50, 500)
+    y_pred_plot, y_std_plot = gp_model.predict(X_plot)
+    
+    # Load log trend function  
+    log_trend = create_log_trend_function(fit_log_trend(X_current, y_current))
+    
+    # Add back log trend
+    y_pred_with_trend = y_pred_plot + log_trend(X_plot)
+    y_trend_current = log_trend(X_current)
+    y_trend_plot = log_trend(X_plot)
+    
+    # Create plot
+    plt.figure(figsize=(12, 8))
+    
+    # Plot current data points
+    plt.plot(X_current, y_current, 'kx', label='Historical BTC Log Prices', markersize=4, alpha=0.8)
+    
+    # Plot log trend
+    plt.plot(X_plot, y_trend_plot, 'r-', label='Log Trend', linewidth=2)
+    
+    # Plot GP prediction  
+    plt.plot(X_plot, y_pred_with_trend, 'b-', label='GP Prediction', linewidth=2)
+    plt.fill_between(X_plot, 
+                     y_pred_with_trend - y_std_plot, 
+                     y_pred_with_trend + y_std_plot,
+                     alpha=0.2, label='GP 1σ', color='skyblue')
+    
+    plt.xlabel('Time Index')
+    plt.ylabel('Log BTC Price') 
+    plt.title(f'GP State at {current_date.strftime("%Y-%m-%d")} | {len(X_current)} datapoints')
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+    
+    # Save with unique filename
+    plot_filename = f'gp_backtest_state.png'
+    plt.savefig(plot_filename, dpi=150, bbox_inches='tight')
+    plt.close()
+    
+    print(f"Saved GP state plot: {plot_filename}")
 
 def main(cfg: Config = Config()):
     print("="*60)
@@ -130,11 +175,12 @@ def main(cfg: Config = Config()):
         
         # Get data up to current point
         data_up_to_now = df.iloc[start_idx:current_idx + 1].copy()
-        data_up_to_now.reset_index(drop=True, inplace=True)
+        # Do NOT reset index!
+        # data_up_to_now.reset_index(drop=True, inplace=True)
         
-        # Create X and y arrays for current data
+        # Use actual indices for X_current
+        X_current = data_up_to_now.index.values
         y_current = np.log(data_up_to_now['price'].astype(float).values)
-        X_current = np.arange(len(y_current))
         
         # Fit log trend up to current point
         try:
@@ -160,17 +206,21 @@ def main(cfg: Config = Config()):
         else:
             # Add new datapoint
             try:
-                new_x = len(X_current) - 1
+                new_x = current_idx  # USE ACTUAL INDEX
                 new_y = residuals[-1]
                 gp_model.add_datapoint(new_x, new_y)
+                
+                # Plot the current GP state (not the saved full dataset results)
+                plot_backtesting_gp_state(gp_model, X_current, y_current, current_date, cfg)
+                
             except Exception as e:
                 print(f"Warning: GP update failed at {current_date}: {e}")
                 optimal_btc_allocation = 0.5  # Default allocation
-        
+
         # Make predictions for portfolio optimization
         try:
-            # Predict future points for horizon
-            future_X = np.arange(len(X_current), len(X_current) + cfg.horizon_weeks)
+            # Predict future points for horizon - USE ACTUAL FUTURE INDICES
+            future_X = np.arange(current_idx + 1, current_idx + 1 + cfg.horizon_weeks)
             residual_pred, residual_std = gp_model.predict(future_X)
             
             # Add back log trend to get log price predictions
