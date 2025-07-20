@@ -11,8 +11,8 @@ from sklearn.gaussian_process.kernels import RBF, ConstantKernel as C, WhiteKern
 
 @dataclass(frozen=True)
 class Config:
-    data_path: str ='../a-data/bitcoin_combined_weekly_data.csv'
-    log_pkl_path: str ='../b-log-fit/log_trend_params.pkl'
+    data_path: str ='../a_data/bitcoin_combined_weekly_data.csv'
+    log_pkl_path: str ='../b_log_fit/log_trend_params.pkl'
     gp_pkl_path: str ='gp_model.pkl'
     x_pred_pkl: str ='X_pred.npy'
     y_pred_pkl: str ='y_pred.npy'
