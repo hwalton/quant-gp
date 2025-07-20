@@ -10,7 +10,7 @@ import time
 
 from dataclasses import dataclass
 from gpytorch.models import ApproximateGP
-from gpytorch.means import LinearMean
+from gpytorch.means import ConstantMean  # Changed from LinearMean
 from gpytorch.kernels import ScaleKernel, RBFKernel, PeriodicKernel
 from gpytorch.likelihoods import GaussianLikelihood
 from gpytorch.mlls import VariationalELBO
@@ -38,13 +38,15 @@ class VariationalGPModel(ApproximateGP):
         variational_strategy = VariationalStrategy(self, inducing_points, variational_distribution, learn_inducing_locations=True)
         super(VariationalGPModel, self).__init__(variational_strategy)
         
-        self.mean_module = LinearMean(input_size=1)
+        # Use ConstantMean for zero-mean residuals (like sklearn GP with normalize_y=True)
+        self.mean_module = ConstantMean()
         
-        # Create individual kernel components for easier access
-        self.rbf_kernel = ScaleKernel(RBFKernel())
-        self.periodic_kernel = ScaleKernel(PeriodicKernel())
+        # EXACT SAME KERNEL STRUCTURE AS SKLEARN VERSION
+        # sklearn: C(1.0) * RBF(10.0) + C(1.0) * ExpSineSquared(10.0, 208.0) + WhiteKernel
+        self.rbf_kernel = ScaleKernel(RBFKernel())  # C * RBF
+        self.periodic_kernel = ScaleKernel(PeriodicKernel())  # C * ExpSineSquared
         
-        # Composite kernel similar to sklearn version
+        # Add kernels (sklearn uses +)
         self.covar_module = self.rbf_kernel + self.periodic_kernel
 
     def forward(self, x):
@@ -55,6 +57,7 @@ class VariationalGPModel(ApproximateGP):
 class OnlineVariationalGP:
     def __init__(self, cfg: Config):
         self.cfg = cfg
+        # WhiteKernel equivalent - separate noise
         self.likelihood = GaussianLikelihood()
         self.model = None
         self.train_x = None
@@ -76,16 +79,29 @@ class OnlineVariationalGP:
         # Initialize model
         self.model = VariationalGPModel(inducing_points)
         
-        # Set initial kernel parameters similar to sklearn version
-        self.model.rbf_kernel.base_kernel.lengthscale = 10.0
-        self.model.periodic_kernel.base_kernel.lengthscale = 10.0
-        self.model.periodic_kernel.base_kernel.period_length = 208.0
+        print(f"Residual statistics (should be zero-mean):")
+        print(f"  Mean: {y.mean():.6f}")
+        print(f"  Std: {y.std():.4f}")  
+        print(f"  Range: [{y.min():.4f}, {y.max():.4f}]")
         
-        # Set up optimizer and loss
+        # MATCH SKLEARN KERNEL INITIALIZATION
+        # sklearn: RBF(length_scale=10.0, length_scale_bounds=(1.0, 100.0))
+        self.model.rbf_kernel.base_kernel.lengthscale = 10.0
+        self.model.rbf_kernel.outputscale = 1.0  # C(1.0)
+        
+        # sklearn: ExpSineSquared(length_scale=10.0, periodicity=208.0, ...)  
+        self.model.periodic_kernel.base_kernel.lengthscale = 10.0
+        self.model.periodic_kernel.base_kernel.period_length = 208.0  # 4 years
+        self.model.periodic_kernel.outputscale = 1.0  # C(1.0)
+        
+        # sklearn: WhiteKernel(noise_level=1, noise_level_bounds=(0.005, 200.0))
+        self.likelihood.noise = 1.0
+        
+        # Lower learning rate for stability
         self.optimizer = torch.optim.Adam([
             {'params': self.model.parameters()},
             {'params': self.likelihood.parameters()},
-        ], lr=self.cfg.learning_rate)
+        ], lr=0.01)
         
         self.mll = VariationalELBO(self.likelihood, self.model, num_data=len(y))
         
@@ -110,11 +126,7 @@ class OnlineVariationalGP:
         x_new_tensor = torch.tensor([[x_new]], dtype=torch.float32)
         y_new_tensor = torch.tensor([y_new], dtype=torch.float32)
         
-        # For online learning, we can either:
-        # 1. Add to training set and do mini-batch update
-        # 2. Use only recent data for efficiency
-        
-        # Option 1: Keep growing dataset (memory will grow)
+        # Add to training set
         self.train_x = torch.cat([self.train_x, x_new_tensor], dim=0)
         self.train_y = torch.cat([self.train_y, y_new_tensor], dim=0)
         
@@ -297,24 +309,35 @@ def load_saved_predictions(cfg: Config):
     return X_pred, y_pred, y_std
 
 def fit_gp(X, residuals, cfg: Config):
-    """Fit variational GP using GPyTorch"""
+    """Fit variational GP using GPyTorch - SAME APPROACH AS SKLEARN VERSION"""
+    
+    # DEBUG: Print what we're actually fitting (should be zero-mean residuals)
+    print(f"\nDEBUG INFO:")
+    print(f"X range: [{X.min():.0f}, {X.max():.0f}]")
+    print(f"Residuals range: [{residuals.min():.4f}, {residuals.max():.4f}]")
+    print(f"Residuals mean: {residuals.mean():.6f} (should be ~0)")
+    print(f"Residuals std: {residuals.std():.4f}")
+    
     gp = OnlineVariationalGP(cfg)
     gp.fit_initial(X, residuals)
     
-    # Print optimized kernel parameters
+    # Print optimized kernel parameters - compare to sklearn version
     print(f"\nOptimized variational kernel parameters:")
     print(f"RBF lengthscale: {gp.model.rbf_kernel.base_kernel.lengthscale.item():.3f}")
+    print(f"RBF outputscale (σ²): {gp.model.rbf_kernel.outputscale.item():.3f}")
     print(f"Periodic lengthscale: {gp.model.periodic_kernel.base_kernel.lengthscale.item():.3f}")
     print(f"Periodic period: {gp.model.periodic_kernel.base_kernel.period_length.item():.3f}")
+    print(f"Periodic outputscale (σ²): {gp.model.periodic_kernel.outputscale.item():.3f}")
     print(f"Noise level: {gp.likelihood.noise.item():.6f}")
     print("-" * 40)
     
     return gp
 
 def predict_gp(gp, X, trend_func, cfg: Config):
+    """SAME APPROACH: predict residuals, then add back trend"""
     X_pred = np.linspace(0, len(X) + cfg.points_into_future, 700)
     y_resid_pred, y_std = gp.predict(X_pred)
-    y_pred = y_resid_pred + trend_func(X_pred)
+    y_pred = y_resid_pred + trend_func(X_pred)  # Add back the log trend
     return X_pred, y_pred, y_std
 
 def save_outputs(gp, X_pred, y_pred, y_std, cfg: Config):
@@ -455,24 +478,118 @@ def plot_results(cfg: Config):
 
     print(f"Variational GP plot saved to {cfg.plot_path}")
 
+def plot_full_dataset_results(cfg: Config):
+    """Plot variational GP results showing the FULL dataset for debugging"""
+    # Load original data
+    X, y = load_data(cfg)
+    
+    # Load timestamps for axis labeling
+    df = pd.read_csv(cfg.data_path, sep=',')
+    df['timestamp'] = pd.to_datetime(df['timestamp'], unit='s')
+    df = df.sort_values(by='timestamp')
+    timestamps = df['timestamp'].values
+    
+    # Load log trend function
+    log_trend = load_log_trend(cfg)
+    
+    # Load saved predictions
+    X_pred, y_pred, y_std = load_saved_predictions(cfg)
+
+    # Convert log prices back to actual prices for plotting
+    y_actual = np.exp(y)
+    y_pred_actual = np.exp(y_pred)
+    y_std_upper_actual = np.exp(y_pred + y_std)
+    y_std_lower_actual = np.exp(y_pred - y_std)
+
+    # Create larger figure
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(15, 12))
+    
+    # TOP PLOT: Full dataset in log space (easier to see residuals)
+    ax1.plot(X, y, 'kx', label='Historical BTC Log Prices', markersize=3, alpha=0.7, zorder=1)
+    ax1.plot(X, log_trend(X), 'r-', label='Log Trend', linewidth=2, zorder=2)
+    ax1.plot(X_pred, y_pred, 'b-', label='Variational GP (Log Space)', linewidth=2, zorder=3)
+    ax1.fill_between(X_pred, y_pred - y_std, y_pred + y_std, 
+                    alpha=0.2, label='Variational GP 1σ (Log Space)', color='skyblue', zorder=2)
+    
+    ax1.set_xlabel('Time (weeks)', fontsize=14)
+    ax1.set_ylabel('Log BTC Price', fontsize=14)
+    ax1.set_title('Variational GP Fit: Full Dataset (Log Space) - DEBUGGING VIEW', fontsize=16)
+    ax1.legend(loc='best', fontsize=12)
+    ax1.grid(True, alpha=0.3)
+    
+    # Set x-axis to show years
+    year_positions = []
+    year_labels = []
+    for i in range(0, len(timestamps), 52):  # Every ~52 weeks (1 year)
+        if i < len(timestamps):
+            year = pd.Timestamp(timestamps[i]).year
+            year_positions.append(i)
+            year_labels.append(str(year))
+    
+    ax1.set_xticks(year_positions)
+    ax1.set_xticklabels(year_labels)
+    ax1.tick_params(axis='both', which='major', labelsize=12)
+    
+    # BOTTOM PLOT: Full dataset in actual price space
+    ax2.plot(X, y_actual, 'kx', label='Historical BTC Prices', markersize=3, alpha=0.7, zorder=1)
+    ax2.plot(X_pred, y_pred_actual, 'b-', label='Variational GP Mean', linewidth=2, zorder=2)
+    ax2.fill_between(X_pred, y_std_lower_actual, y_std_upper_actual, 
+                    alpha=0.2, label='Variational GP 1σ Confidence', color='skyblue', zorder=2)
+    
+    ax2.set_yscale('log')
+    ax2.set_xlabel('Time (weeks)', fontsize=14)
+    ax2.set_ylabel('BTC Price (USD)', fontsize=14)
+    ax2.set_title('Variational GP Fit: Full Dataset (Actual Prices)', fontsize=16)
+    ax2.legend(loc='best', fontsize=12)
+    ax2.grid(True, alpha=0.3, which='both')
+    
+    # Custom formatter for price axis
+    def currency_formatter(y, p):
+        if y >= 1000:
+            return f'{int(y/1000)}k'
+        else:
+            return f'{int(y)}'
+    
+    ax2.yaxis.set_major_formatter(plt.FuncFormatter(currency_formatter))
+    ax2.set_xticks(year_positions)
+    ax2.set_xticklabels(year_labels)
+    ax2.tick_params(axis='both', which='major', labelsize=12)
+    
+    plt.tight_layout()
+    
+    # Save with different name
+    full_plot_path = cfg.plot_path.replace('.png', '_full_dataset.png')
+    fig.savefig(full_plot_path, dpi=150, bbox_inches='tight')
+    plt.close('all')
+
+    print(f"Full dataset plot saved to {full_plot_path}")
+    
+    # Print some diagnostics
+    print(f"\nDiagnostics:")
+    print(f"  Data range: {X.min():.0f} to {X.max():.0f} weeks")
+    print(f"  Log price range: {y.min():.2f} to {y.max():.2f}")
+    print(f"  Residuals std: {(y - log_trend(X)).std():.4f}")
+    print(f"  Prediction range: {X_pred.min():.0f} to {X_pred.max():.0f} weeks")
+
 def main():
     cfg = Config()
 
     X, y = load_data(cfg)
     log_trend = load_log_trend(cfg)
-    residuals = y - log_trend(X)
+    residuals = y - log_trend(X)  # SAME AS SKLEARN VERSION
 
     gp = fit_gp(X, residuals, cfg)
     X_pred, y_pred, y_std = predict_gp(gp, X, log_trend, cfg)
 
     save_outputs(gp, X_pred, y_pred, y_std, cfg)
-    plot_results(cfg)
+    plot_results(cfg)           # Original zoomed plot
+    plot_full_dataset_results(cfg)  # New full dataset plot
     
-    # Demonstrate variational online updates
-    online_update_example(cfg)
+    # # Demonstrate variational online updates
+    # online_update_example(cfg)
     
-    # Show timing comparison
-    timing_comparison_example(cfg)
+    # # Show timing comparison
+    # timing_comparison_example(cfg)
 
 if __name__ == '__main__':    
     main()
