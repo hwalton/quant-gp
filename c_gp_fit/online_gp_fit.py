@@ -16,15 +16,26 @@ from gpytorch.likelihoods import GaussianLikelihood
 from gpytorch.mlls import VariationalELBO
 from gpytorch.variational import CholeskyVariationalDistribution, VariationalStrategy
 
+import os
+
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA_PATH = os.path.join(PROJECT_ROOT, 'a_data', 'bitcoin_combined_weekly_data.csv')
+LOG_PKL_PATH = os.path.join(PROJECT_ROOT, 'b_log_fit', 'log_trend_params.pkl')
+GP_PKL_PATH = os.path.join(PROJECT_ROOT, 'c_gp_fit', 'variational_gp_model.pth')
+X_PRED_PKL = os.path.join(PROJECT_ROOT, 'c_gp_fit', 'X_pred.npy')
+Y_PRED_PKL = os.path.join(PROJECT_ROOT, 'c_gp_fit', 'y_pred.npy')
+Y_STD_PKL = os.path.join(PROJECT_ROOT, 'c_gp_fit', 'y_std.npy')
+PLOT_PATH = os.path.join(PROJECT_ROOT, 'c_gp_fit', 'variational_gp_output.png')
+
 @dataclass(frozen=True)
 class Config:
-    data_path: str ='../a_data/bitcoin_combined_weekly_data.csv'
-    log_pkl_path: str ='../b_log_fit/log_trend_params.pkl'
-    gp_pkl_path: str ='variational_gp_model.pth'
-    x_pred_pkl: str ='X_pred.npy'
-    y_pred_pkl: str ='y_pred.npy'
-    y_std_pkl: str ='y_std.npy'
-    plot_path: str ='variational_gp_output.png'
+    data_path: str = DATA_PATH
+    log_pkl_path: str = LOG_PKL_PATH
+    gp_pkl_path: str = GP_PKL_PATH
+    x_pred_pkl: str = X_PRED_PKL
+    y_pred_pkl: str = Y_PRED_PKL
+    y_std_pkl: str = 'y_std.npy'
+    plot_path: str = PLOT_PATH
     points_into_future: int = 48*3
     y_limit: tuple =(4, 18)
     learning_rate: float = 0.1
