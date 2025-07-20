@@ -174,7 +174,7 @@ def main(cfg: Config = Config()):
         current_log_price = np.log(current_price)
         
         # Get data up to current point
-        data_up_to_now = df.iloc[start_idx:current_idx + 1].copy()
+        data_up_to_now = df.iloc[0:current_idx + 1].copy()
         # Do NOT reset index!
         # data_up_to_now.reset_index(drop=True, inplace=True)
         
