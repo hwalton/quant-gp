@@ -38,7 +38,7 @@ from b_log_fit.log_fit import main as log_fit_main
 
 def main():
     format_data_main()
-    # log_fit_main()
+    log_fit_main()
 
 if __name__ == "__main__":
     main()

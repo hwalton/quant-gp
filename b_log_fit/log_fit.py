@@ -7,10 +7,14 @@ import joblib
 import os
 from dataclasses import dataclass
 
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA_PATH = os.path.join(PROJECT_ROOT, 'a_data', 'bitcoin_combined_weekly_data.csv')
+OUTPUT_PKL = os.path.join(PROJECT_ROOT, 'b_log_fit', 'log_trend_params.pkl')
+                          
 @dataclass(frozen=True)
 class Config:
-    data_path: str = '../a_data/bitcoin_combined_weekly_data.csv'
-    output_pkl: str = 'log_trend_params.pkl'
+    data_path: str = DATA_PATH
+    output_pkl: str = OUTPUT_PKL
     cycle_length: int = 208
 
 def load_data(cfg: Config):
