@@ -22,8 +22,8 @@ from d_optimise_portfolio.config import Config as OptimiseConfig
 class Config:
     data_path: str = os.path.join(PROJECT_ROOT, 'a_data', 'bitcoin_combined_weekly_data.csv')
     starting_wealth: float = 1000
-    start_datetime: str = "2020-06-01"  # Start date for backtesting
-    end_datetime: str = "2021-06-01"    # End date for backtesting
+    start_datetime: str = "2021-06-01"  # Start date for backtesting
+    end_datetime: str = "2022-06-01"    # End date for backtesting
     
     # Portfolio optimization config
     preference_curve: str = 'identity'
@@ -209,7 +209,11 @@ def main(cfg: Config = Config()):
                 new_x = current_idx  # USE ACTUAL INDEX
                 new_y = residuals[-1]
                 gp_model.add_datapoint(new_x, new_y)
-                
+
+                if len(gp_model.train_X) % 50 == 0:
+                    print(f"Retrain full model {len(gp_model.X)} total points...")
+                    gp_model.fit_initial(X_current, residuals)
+
                 # Plot the current GP state (not the saved full dataset results)
                 plot_backtesting_gp_state(gp_model, X_current, y_current, current_date, cfg)
                 
@@ -235,6 +239,11 @@ def main(cfg: Config = Config()):
             optimal_btc_allocation = optimize_portfolio_for_current_state(
                 current_log_price, mu_seq, sigma_seq, cfg)
             
+            # Print the optimised portfolio for this step
+            print(f"=======================================\n"
+                  f"Allocation (BTC): {optimal_btc_allocation:.4f}\n"
+                  f"=======================================")
+
         except Exception as e:
             print(f"Warning: Portfolio optimization failed at {current_date}: {e}")
             optimal_btc_allocation = 0.5  # Default allocation
@@ -276,9 +285,6 @@ def main(cfg: Config = Config()):
                   f"Strategic: ${strategic_wealth:8.0f} | "
                   f"Cash: ${cash_wealth:8.0f} | "
                   f"BTC: ${btc_wealth:8.0f}")
-        
-        if (len(residuals) % 50 == 0):  # Every 50 points
-            gp_model.periodic_full_retrain()
     
     # Final results
     final_strategic = strategic_wealths[-1]
