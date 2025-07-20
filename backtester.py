@@ -22,8 +22,8 @@ from d_optimise_portfolio.config import Config as OptimiseConfig
 class Config:
     data_path: str = os.path.join(PROJECT_ROOT, 'a_data', 'bitcoin_combined_weekly_data.csv')
     starting_wealth: float = 1000
-    start_datetime: str = "2021-06-01"  # Start date for backtesting
-    end_datetime: str = "2022-06-01"    # End date for backtesting
+    start_datetime: str = "2022-06-01"  # Start date for backtesting
+    end_datetime: str = "2023-06-01"    # End date for backtesting
     
     # Portfolio optimization config
     preference_curve: str = 'identity'
@@ -210,8 +210,8 @@ def main(cfg: Config = Config()):
                 new_y = residuals[-1]
                 gp_model.add_datapoint(new_x, new_y)
 
-                if len(gp_model.train_X) % 50 == 0:
-                    print(f"Retrain full model {len(gp_model.X)} total points...")
+                if len(gp_model.train_x) % 50 == 0:
+                    print(f"Retrain full model {len(gp_model.train_x)} total points...")
                     gp_model.fit_initial(X_current, residuals)
 
                 # Plot the current GP state (not the saved full dataset results)

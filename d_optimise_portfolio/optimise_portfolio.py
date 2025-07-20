@@ -19,6 +19,8 @@ from d_optimise_portfolio.config import Config
 from d_optimise_portfolio.plot_figures import plot_allocation_vs_utility, plot_preference_curve, plot_final_wealth_distribution
 from d_optimise_portfolio.get_utility_function import get_utility_func
 
+VERBOSE = False
+
 
 def calculate_grid_parameters(T, max_total_paths=1000000):
     grid_points_per_dim = min(100, int(max_total_paths**(1/T)))
@@ -140,7 +142,7 @@ def run_bayesian_optimisation(cfg, mu_seq, sigma_seq, current_log_price, months,
         n_initial_points=10,
         acq_func="EI", # EI, PI, or LCB
         random_state=42,
-        verbose=False
+        verbose=VERBOSE
     )
 
     optimal_p = np.array(result.x)
@@ -148,10 +150,9 @@ def run_bayesian_optimisation(cfg, mu_seq, sigma_seq, current_log_price, months,
 
     return optimal_p, max_utility, result
 
-def coordinate_descent_refinement(initial_p, mu_seq, sigma_seq, current_log_price, cfg, grid_points_per_dim, max_recursive_calls=3, verbose=False):
-    """More efficient refinement using coordinate descent for high-dimensional problems"""
+def coordinate_descent_refinement(initial_p, mu_seq, sigma_seq, current_log_price, cfg, grid_points_per_dim, max_recursive_calls=3):
     
-    if verbose:
+    if VERBOSE:
         print("Using coordinate descent refinement...")
     
     refinement_deltas = np.array([-0.1, -0.075, -0.05, -0.025, 0, 0.025, 0.05, 0.075, 0.1])
@@ -160,7 +161,7 @@ def coordinate_descent_refinement(initial_p, mu_seq, sigma_seq, current_log_pric
     current_p = np.array(initial_p)
     current_utility = objective_func(initial_p, mu_seq, sigma_seq, current_log_price, cfg, grid_points_per_dim)
     
-    if verbose:
+    if VERBOSE:
         print(f"Starting utility: {current_utility:.6f}")
     
     overall_improvement = False
@@ -171,7 +172,7 @@ def coordinate_descent_refinement(initial_p, mu_seq, sigma_seq, current_log_pric
         best_delta = 0
         best_utility_for_dim = current_utility
         
-        if verbose:
+        if VERBOSE:
             print(f"\nOptimizing dimension {dim} (current value: {current_p[dim]:.3f})")
         
         # Try each delta for this dimension
@@ -199,24 +200,24 @@ def coordinate_descent_refinement(initial_p, mu_seq, sigma_seq, current_log_pric
             if abs(best_delta) == 0.1:
                 found_edge_improvement = True
             
-            if verbose:
+            if VERBOSE:
                 print(f"  Improved dimension {dim}: {current_p[dim]:.3f} -> {current_utility:.6f} (delta: {best_delta:+.3f})")
         else:
-            if verbose:
+            if VERBOSE:
                 print(f"  No improvement for dimension {dim}")
     
     if overall_improvement:
         improvement = current_utility - objective_func(initial_p, mu_seq, sigma_seq, current_log_price, cfg, grid_points_per_dim)
-        if verbose:
+        if VERBOSE:
             print(f"\nOverall improvement: {improvement:.6f}")
             print(f"Final allocation: {np.round(current_p, 3)}")
     else:
-        if verbose:
+        if VERBOSE:
             print("\nNo improvement found - Bayesian optimization result was already locally optimal")
     
     # If we found improvement at the edge (±0.1), recursively call for further refinement
     if found_edge_improvement and max_recursive_calls > 0:
-        if verbose:
+        if VERBOSE:
             print(f"\nFound edge improvement (±0.1 delta), recursively searching further...")
             print(f"Recursive calls remaining: {max_recursive_calls}")
 
@@ -229,7 +230,7 @@ def coordinate_descent_refinement(initial_p, mu_seq, sigma_seq, current_log_pric
     
     return current_p, current_utility
 
-def main(cfg: Config = Config(), verbose: bool = False):
+def main(cfg: Config = Config()):
     start_time = time.time()
 
     mu_seq, sigma_seq, current_log_price = load_gp_predictions(cfg)

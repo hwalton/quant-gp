@@ -44,7 +44,7 @@ class Config:
     y_limit: tuple =(4, 18)
     learning_rate: float = 0.1
     training_iter: int = 200  # Reduce from 500 to prevent parameter drift
-    online_iter: int = 50  # or higher
+    online_iter: int = 40  # or higher
     inducing_points: int = 150  # Increase from 100  # Number of inducing points
 
 class VariationalGPModel(ApproximateGP):
