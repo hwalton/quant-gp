@@ -107,8 +107,8 @@ class OnlineVariationalGP:
         print(f"  Noise: {0.0142:.4f}")
         
         # RBF kernel - match sklearn exactly
-        self.model.rbf_kernel.base_kernel.lengthscale = 3.8
-        self.model.rbf_kernel.outputscale = 0.618**2
+        self.model.rbf_kernel.base_kernel.lengthscale = 1.0
+        self.model.rbf_kernel.outputscale = 1.0**2
         
         # Periodic kernel - approximate ExpSineSquared
         self.model.periodic_kernel.base_kernel.lengthscale = 0.86
@@ -134,7 +134,7 @@ class OnlineVariationalGP:
         print(f"✓ Initial variational training completed in {initial_training_time:.2f} seconds")
         print(f"  Training rate: {len(y)/initial_training_time:.1f} datapoints/second")
         print(f"  Using {self.cfg.inducing_points} inducing points")
-        
+
         return self.model
     
     def add_datapoint(self, x_new, y_new):
@@ -158,6 +158,11 @@ class OnlineVariationalGP:
         
         # Efficient online update with fewer iterations
         self._train_model_online()
+
+        print(f"optimised kernel parameters:")
+        print(f"  RBF: outputscale={self.model.rbf_kernel.outputscale.item():.3f}, lengthscale={self.model.rbf_kernel.base_kernel.lengthscale.item():.3f}")
+        print(f"  Periodic: outputscale={self.model.periodic_kernel.outputscale.item():.3f}, lengthscale={self.model.periodic_kernel.base_kernel.lengthscale.item():.3f}, period={self.model.periodic_kernel.base_kernel.period_length.item():.3f}")
+        print(f"  Noise: {self.likelihood.noise.item():.4f}")
         
         update_time = time.time() - start_time
         print(f"✓ Datapoint added with variational update in {update_time:.2f} seconds")
