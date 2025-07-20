@@ -4,6 +4,12 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import joblib
+import os
+import sys
+
+# Add the project root to sys.path for absolute imports
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(PROJECT_ROOT)
 
 from dataclasses import dataclass
 from sklearn.gaussian_process import GaussianProcessRegressor
@@ -11,13 +17,13 @@ from sklearn.gaussian_process.kernels import RBF, ConstantKernel as C, WhiteKern
 
 @dataclass(frozen=True)
 class Config:
-    data_path: str ='../0-data/bitcoin_combined_weekly_data.csv'
-    log_pkl_path: str ='../1-log-fit/log_trend_params.pkl'
-    gp_pkl_path: str ='gp_model.pkl'
-    x_pred_pkl: str ='X_pred.npy'
-    y_pred_pkl: str ='y_pred.npy'
-    y_std_pkl: str ='y_std.npy'
-    plot_path: str ='gp_output.png'
+    data_path: str = os.path.join(PROJECT_ROOT, 'a_data', 'bitcoin_combined_weekly_data.csv')
+    log_pkl_path: str = os.path.join(PROJECT_ROOT, 'b_log_fit', 'log_trend_params.pkl')
+    gp_pkl_path: str = os.path.join(PROJECT_ROOT, 'c_gp_fit', 'gp_model.pkl')
+    x_pred_pkl: str = os.path.join(PROJECT_ROOT, 'c_gp_fit', 'X_pred.npy')
+    y_pred_pkl: str = os.path.join(PROJECT_ROOT, 'c_gp_fit', 'y_pred.npy')
+    y_std_pkl: str = os.path.join(PROJECT_ROOT, 'c_gp_fit', 'y_std.npy')
+    plot_path: str = os.path.join(PROJECT_ROOT, 'c_gp_fit', 'gp_output.png')
     points_into_future: int = 48*3
     y_limit: tuple =(4, 18)
 
