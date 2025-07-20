@@ -192,24 +192,19 @@ def main(cfg: Config = Config()):
         # Calculate returns if not the first period
         if current_idx > start_idx:
             prev_price = df.iloc[current_idx - 1]['price']
-            btc_return = current_price / prev_price
+            current_price = df.iloc[current_idx]['price']
             
-            # Update strategic portfolio
-            strategic_wealth = prev_strategic_cash + prev_strategic_btc * btc_return
+            # Update strategic portfolio - FIX THE BUG
+            strategic_wealth = prev_strategic_cash + prev_strategic_btc * current_price
             
-            # Update cash portfolio (no change)
-            # cash_wealth stays the same
-            
-            # Update BTC portfolio
+            # Update BTC portfolio (buy-and-hold)
             btc_wealth = btc_holdings * current_price
+            
+            # Cash portfolio stays the same (no change needed)
         
         # Record current allocation and rebalance strategic portfolio
-        if current_idx > start_idx:
-            strategic_cash = strategic_wealth * (1 - optimal_btc_allocation)
-            strategic_btc = strategic_wealth * optimal_btc_allocation / current_price
-        else:
-            strategic_cash = strategic_wealth * (1 - optimal_btc_allocation)
-            strategic_btc = strategic_wealth * optimal_btc_allocation / current_price
+        strategic_cash = strategic_wealth * (1 - optimal_btc_allocation)
+        strategic_btc = strategic_wealth * optimal_btc_allocation / current_price
         
         # Store for next iteration
         prev_strategic_cash = strategic_cash
