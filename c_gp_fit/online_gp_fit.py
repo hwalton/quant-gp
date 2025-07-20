@@ -17,8 +17,12 @@ from gpytorch.mlls import VariationalELBO
 from gpytorch.variational import CholeskyVariationalDistribution, VariationalStrategy
 
 import os
+import sys
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(PROJECT_ROOT)
+from utils.utils import load_data
+
 DATA_PATH = os.path.join(PROJECT_ROOT, 'a_data', 'bitcoin_combined_weekly_data.csv')
 LOG_PKL_PATH = os.path.join(PROJECT_ROOT, 'b_log_fit', 'log_trend_params.pkl')
 GP_PKL_PATH = os.path.join(PROJECT_ROOT, 'c_gp_fit', 'variational_gp_model.pth')
@@ -308,19 +312,6 @@ class OnlineVariationalGP:
         print(f"✓ Variational model loaded in {load_time:.3f} seconds")
         print(f"  Loaded {len(self.train_y)} training points")
         print(f"  Using {len(inducing_points)} inducing points")
-
-def load_data(cfg: Config):
-    df = pd.read_csv(cfg.data_path, sep=',')
-    print("Columns:", df.columns.tolist())
-    df['timestamp'] = pd.to_datetime(df['timestamp'], unit='s')
-    df = df.sort_values(by='timestamp')
-    y_all = np.log(df['price'].astype(float).values)
-    
-    # Use all data instead of trimming to cycles
-    y = y_all
-    X = np.arange(len(y))
-    
-    return X, y
 
 def load_log_trend(cfg: Config):
     params = joblib.load(cfg.log_pkl_path)

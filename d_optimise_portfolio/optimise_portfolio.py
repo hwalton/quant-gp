@@ -13,6 +13,8 @@ import sys
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(PROJECT_ROOT)
 
+from utils.utils import load_data
+
 from d_optimise_portfolio.config import Config
 from d_optimise_portfolio.plot_figures import plot_allocation_vs_utility, plot_preference_curve, plot_final_wealth_distribution
 from d_optimise_portfolio.get_utility_function import get_utility_func
