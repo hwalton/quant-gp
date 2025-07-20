@@ -35,6 +35,9 @@ class Config:
     step_threshold: float = 1100
     step_steepness: float = 100.0
 
+    # GP update mode
+    gp_update_mode: str = ['online', 'full'][1]
+
 def create_log_trend_function(params):
     """Create log trend function from fitted parameters"""
     def trend_func(x):
@@ -204,19 +207,21 @@ def main(cfg: Config = Config()):
                 print(f"Warning: Initial GP training failed: {e}")
                 optimal_btc_allocation = 0.5  # Default allocation
         else:
-            # Add new datapoint
             try:
-                new_x = current_idx  # USE ACTUAL INDEX
-                new_y = residuals[-1]
-                gp_model.add_datapoint(new_x, new_y)
-
-                if len(gp_model.train_x) % 50 == 0:
-                    print(f"Retrain full model {len(gp_model.train_x)} total points...")
+                if cfg.gp_update_mode == "full":
+                    # Refit GP from scratch with all data up to now
+                    print(f"Full GP retrain with {len(residuals)} data points...")
                     gp_model.fit_initial(X_current, residuals)
+                else:
+                    # Online update (default)
+                    new_x = current_idx
+                    new_y = residuals[-1]
+                    gp_model.add_datapoint(new_x, new_y)
+                    if len(gp_model.train_x) % 50 == 0:
+                        print(f"Retrain full model {len(gp_model.train_x)} total points...")
+                        gp_model.fit_initial(X_current, residuals)
 
-                # Plot the current GP state (not the saved full dataset results)
                 plot_backtesting_gp_state(gp_model, X_current, y_current, current_date, cfg)
-                
             except Exception as e:
                 print(f"Warning: GP update failed at {current_date}: {e}")
                 optimal_btc_allocation = 0.5  # Default allocation

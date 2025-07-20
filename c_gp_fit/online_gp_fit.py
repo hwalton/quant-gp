@@ -129,6 +129,11 @@ class OnlineVariationalGP:
         # Train the model
         print(f"\nStarting variational training with {self.cfg.training_iter} iterations...")
         self._train_model_full()
+
+        print(f"optimised kernel parameters:")
+        print(f"  RBF: outputscale={self.model.rbf_kernel.outputscale.item():.3f}, lengthscale={self.model.rbf_kernel.base_kernel.lengthscale.item():.3f}")
+        print(f"  Periodic: outputscale={self.model.periodic_kernel.outputscale.item():.3f}, lengthscale={self.model.periodic_kernel.base_kernel.lengthscale.item():.3f}, period={self.model.periodic_kernel.base_kernel.period_length.item():.3f}")
+        print(f"  Noise: {self.likelihood.noise.item():.4f}")
         
         initial_training_time = time.time() - start_time
         print(f"✓ Initial variational training completed in {initial_training_time:.2f} seconds")
