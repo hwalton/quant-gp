@@ -107,6 +107,7 @@ def backtest_objective(kernel_params, static):
 
         try:
             gp_model = fit_gp(X_current, residuals, kernel, opt=False)
+            plot_backtesting_gp_state(gp_model, X_current, y_current, df.iloc[current_idx]['timestamp'], cfg)
         except Exception:
             return 1e6  # Penalize failed fits
 
@@ -145,6 +146,51 @@ def backtest_objective(kernel_params, static):
     # Negative for minimization
     return -float(final_utility)
 
+def plot_backtesting_gp_state(gp_model, X_current, y_current, current_date, cfg):
+    """Plot current GP state during backtesting"""
+    import matplotlib.pyplot as plt
+
+    # Make predictions for plotting
+    X_plot = np.linspace(X_current.min(), X_current.max() + 50, 500)
+    y_pred_plot, y_std_plot = gp_model.predict(X_plot.reshape(-1, 1), return_std=True)
+
+    # Load log trend function  
+    log_trend = create_log_trend_function(fit_log_trend(X_current, y_current))
+
+    # Add back log trend
+    y_pred_with_trend = y_pred_plot + log_trend(X_plot)
+    y_trend_current = log_trend(X_current)
+    y_trend_plot = log_trend(X_plot)
+
+    # Create plot
+    plt.figure(figsize=(12, 8))
+
+    # Plot current data points
+    plt.plot(X_current, y_current, 'kx', label='Historical BTC Log Prices', markersize=4, alpha=0.8)
+
+    # Plot log trend
+    plt.plot(X_plot, y_trend_plot, 'r-', label='Log Trend', linewidth=2)
+
+    # Plot GP prediction  
+    plt.plot(X_plot, y_pred_with_trend, 'b-', label='GP Prediction', linewidth=2)
+    plt.fill_between(X_plot, 
+                     y_pred_with_trend - y_std_plot, 
+                     y_pred_with_trend + y_std_plot,
+                     alpha=0.2, label='GP 1σ', color='skyblue')
+
+    plt.xlabel('Time Index')
+    plt.ylabel('Log BTC Price') 
+    plt.title(f'GP State at {current_date.strftime("%Y-%m-%d")} | {len(X_current)} datapoints')
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+
+    # Save with unique filename
+    plot_filename = f'gp_backtest_state.png'
+    plt.savefig(plot_filename, dpi=150, bbox_inches='tight')
+    plt.close()
+
+    print(f"Saved GP state plot: {plot_filename}")
+    
 def main():
     cfg = Config()
     # Load data and static variables ONCE
