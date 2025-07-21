@@ -25,7 +25,7 @@ class Config:
     data_path: str = os.path.join(PROJECT_ROOT, 'a_data', 'bitcoin_combined_weekly_data.csv')
     starting_wealth: float = 1000
     start_datetime: str = "2019-01-01"
-    end_datetime: str = "2020-01-01"
+    end_datetime: str = "2019-02-01"
     preference_curve: str = 'identity'
     horizon_weeks: int = 1
     rebalance_every: int = 1
@@ -187,6 +187,130 @@ def plot_backtesting_gp_state_final(gp_model, X_current, y_current, current_date
     plt.close()
     print(f"Saved GP state plot: {plot_filename}")
 
+def print_backtest_stats(best_kernel_params, static):
+    df, cfg, utility_func = static['df'], static['cfg'], static['utility_func']
+    start_idx, end_idx = static['start_idx'], static['end_idx']
+
+    strategic_wealth = cfg.starting_wealth
+    cash_wealth = cfg.starting_wealth
+    btc_wealth = cfg.starting_wealth
+
+    strategic_allocations = []
+    strategic_wealths = []
+    cash_wealths = []
+    btc_wealths = []
+    dates = []
+    btc_prices = []
+
+    initial_btc_price = df.iloc[start_idx]['price']
+    btc_holdings = btc_wealth / initial_btc_price
+
+    kernel = build_fixed_kernel(
+        rbf_lengthscale=best_kernel_params[0],
+        rbf_constant=best_kernel_params[1],
+        periodic_lengthscale=best_kernel_params[2],
+        periodic_period=best_kernel_params[3],
+        periodic_constant=best_kernel_params[4],
+        noise_level=best_kernel_params[5]
+    )
+
+    prev_strategic_cash = strategic_wealth
+    prev_strategic_btc = 0.0
+
+    for current_idx in range(start_idx, end_idx + 1):
+        current_price = df.iloc[current_idx]['price']
+        current_date = df.iloc[current_idx]['timestamp']
+        data_up_to_now = df.iloc[0:current_idx + 1].copy()
+        X_current = data_up_to_now.index.values
+        y_current = np.log(data_up_to_now['price'].astype(float).values)
+
+        try:
+            log_params = fit_log_trend(X_current, y_current)
+            log_trend = create_log_trend_function(log_params)
+            residuals = y_current - log_trend(X_current)
+        except Exception:
+            log_trend = lambda x: np.mean(y_current)
+            residuals = y_current - log_trend(X_current)
+
+        try:
+            gp_model = fit_gp(X_current, residuals, kernel, opt=False)
+        except Exception:
+            optimal_btc_allocation = 0.5
+
+        # Make predictions for portfolio optimization
+        try:
+            future_X = np.arange(current_idx + 1, current_idx + 1 + cfg.horizon_weeks)
+            X_pred = future_X.reshape(-1, 1)
+            y_resid_pred, y_std = gp_model.predict(X_pred, return_std=True)
+            log_price_pred = y_resid_pred + log_trend(future_X)
+            mu_seq = log_price_pred
+            optimal_btc_allocation = float(mu_seq[0] > np.log(current_price))
+        except Exception:
+            optimal_btc_allocation = 0.5
+
+        if current_idx > start_idx:
+            strategic_wealth = prev_strategic_cash + prev_strategic_btc * current_price
+            btc_wealth = btc_holdings * current_price
+
+        strategic_cash = strategic_wealth * (1 - optimal_btc_allocation)
+        strategic_btc = strategic_wealth * optimal_btc_allocation / current_price
+        prev_strategic_cash = strategic_cash
+        prev_strategic_btc = strategic_btc
+
+        strategic_allocations.append(optimal_btc_allocation)
+        strategic_wealths.append(strategic_wealth)
+        cash_wealths.append(cash_wealth)
+        btc_wealths.append(btc_wealth)
+        dates.append(current_date)
+        btc_prices.append(current_price)
+
+    final_strategic = strategic_wealths[-1]
+    final_cash = cash_wealths[-1]
+    final_btc = btc_wealths[-1]
+
+    print("="*60)
+    print("BACKTESTING RESULTS")
+    print("="*60)
+    print(f"Period: {cfg.start_datetime} to {cfg.end_datetime}")
+    print(f"Initial wealth: ${cfg.starting_wealth:,.2f}\n")
+    print("FINAL WEALTH:")
+    print(f"  Strategic Portfolio: ${final_strategic:,.2f}")
+    print(f"  Cash Only:          ${final_cash:,.2f}")
+    print(f"  BTC Only:           ${final_btc:,.2f}\n")
+
+    strategic_return = (final_strategic / cfg.starting_wealth - 1) * 100
+    cash_return = (final_cash / cfg.starting_wealth - 1) * 100
+    btc_return = (final_btc / cfg.starting_wealth - 1) * 100
+
+    print("TOTAL RETURNS:")
+    print(f"  Strategic Portfolio: {strategic_return:+7.2f}%")
+    print(f"  Cash Only:          {cash_return:+7.2f}%")
+    print(f"  BTC Only:           {btc_return:+7.2f}%\n")
+
+    strategic_vs_cash = strategic_return - cash_return
+    strategic_vs_btc = strategic_return - btc_return
+
+    print("OUTPERFORMANCE:")
+    print(f"  Strategic vs Cash:   {strategic_vs_cash:+7.2f}%")
+    print(f"  Strategic vs BTC:    {strategic_vs_btc:+7.2f}%\n")
+
+    strategic_wealths = np.array(strategic_wealths)
+    btc_wealths = np.array(btc_wealths)
+    strategic_allocations = np.array(strategic_allocations)
+
+    print("PORTFOLIO STATISTICS:")
+    print(f"  Average BTC allocation: {np.mean(strategic_allocations):7.2%}")
+    print(f"  Min BTC allocation:     {np.min(strategic_allocations):7.2%}")
+    print(f"  Max BTC allocation:     {np.max(strategic_allocations):7.2%}")
+    print(f"  Allocation volatility:  {np.std(strategic_allocations):7.2%}")
+
+    strategic_returns = np.diff(strategic_wealths) / strategic_wealths[:-1]
+    btc_returns = np.diff(btc_wealths) / btc_wealths[:-1]
+
+    print(f"  Strategic volatility:   {np.std(strategic_returns)*100:7.2f}%")
+    print(f"  BTC volatility:         {np.std(btc_returns)*100:7.2f}%")
+    print()
+
 def main():
     cfg = Config()
     # Load data and static variables ONCE
@@ -239,6 +363,7 @@ def main():
     for name, val in zip([d.name for d in space], result.x):
         print(f"  {name}: {val:.4f}")
     print(f"Best (max) utility: {-result.fun:.4f}")
+    print_backtest_stats(result.x, static)
 
 if __name__ == "__main__":
     main()
