@@ -20,8 +20,8 @@ from d_optimise_portfolio.config import Config as OptimiseConfig
 class Config:
     data_path: str = os.path.join(PROJECT_ROOT, 'a_data', 'bitcoin_combined_weekly_data.csv')
     starting_wealth: float = 1000
-    start_datetime: str = "2019-01-01"
-    end_datetime: str = "2023-01-01"
+    start_datetime: str = "2017-01-01"
+    end_datetime: str = "2019-01-01"
     preference_curve: str = 'identity'
     horizon_weeks: int = 1
     rebalance_every: int = 1
@@ -154,12 +154,12 @@ def main(cfg: Config = Config()):
         # periodic_period=205.4258,
         # periodic_constant=0.1046,
         # noise_level=0.0218
-        rbf_lengthscale=15.199082092610,
-        rbf_constant=1.125415051539,
-        periodic_lengthscale=5.908836540072,
-        periodic_period=293.051061452828,
-        periodic_constant=1.253365070605,
-        noise_level=0.028323919020,
+        rbf_lengthscale=2.726979908019,
+        rbf_constant=1.751093835483,
+        periodic_lengthscale=0.503437502578,
+        periodic_period=269.544761328966,
+        periodic_constant=0.149241619183,
+        noise_level=0.014571116444,
     )
 
     for current_idx in range(start_idx, end_idx + 1):
