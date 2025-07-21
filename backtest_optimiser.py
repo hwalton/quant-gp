@@ -96,6 +96,14 @@ def backtest_objective(kernel_params, static, iteration=None):
     last_y_current = None
     last_date = None
 
+    # Add these tracking lists at the top of the function:
+    strategic_allocations = []
+    strategic_wealths = []
+    cash_wealths = []
+    btc_wealths = []
+    dates = []
+    btc_prices = []
+
     for current_idx in range(start_idx, end_idx + 1):
         current_price = df.iloc[current_idx]['price']
         data_up_to_now = df.iloc[0:current_idx + 1].copy()
@@ -149,6 +157,14 @@ def backtest_objective(kernel_params, static, iteration=None):
         prev_strategic_cash = strategic_cash
         prev_strategic_btc = strategic_btc
 
+        # After updating prev_strategic_cash and prev_strategic_btc, add:
+        strategic_allocations.append(optimal_btc_allocation)
+        strategic_wealths.append(strategic_wealth)
+        cash_wealths.append(cash_wealth)
+        btc_wealths.append(btc_wealth)
+        dates.append(df.iloc[current_idx]['timestamp'])
+        btc_prices.append(current_price)
+
     # Compute utility of final strategic wealth
     final_utility = utility_func(np.log(strategic_wealth))
     minval = -float(final_utility)
@@ -157,113 +173,8 @@ def backtest_objective(kernel_params, static, iteration=None):
         plot_backtesting_gp_state_final(
             last_gp_model, last_X_current, last_y_current, last_date, cfg, iteration, minval
         )
-    return minval
 
-def plot_backtesting_gp_state_final(gp_model, X_current, y_current, current_date, cfg, iteration, minval):
-    """Plot GP state after full backtest for a given kernel hyperparameter set."""
-    import matplotlib.pyplot as plt
-
-    X_plot = np.linspace(X_current.min(), X_current.max() + 208, 500)
-    y_pred_plot, y_std_plot = gp_model.predict(X_plot.reshape(-1, 1), return_std=True)
-    log_trend = create_log_trend_function(fit_log_trend(X_current, y_current))
-    y_pred_with_trend = y_pred_plot + log_trend(X_plot)
-    y_trend_plot = log_trend(X_plot)
-
-    plt.figure(figsize=(12, 8))
-    plt.plot(X_current, y_current, 'kx', label='Historical BTC Log Prices', markersize=4, alpha=0.8)
-    plt.plot(X_plot, y_trend_plot, 'r-', label='Log Trend', linewidth=2)
-    plt.plot(X_plot, y_pred_with_trend, 'b-', label='GP Prediction', linewidth=2)
-    plt.fill_between(X_plot, 
-                     y_pred_with_trend - y_std_plot, 
-                     y_pred_with_trend + y_std_plot,
-                     alpha=0.2, label='GP 1σ', color='skyblue')
-    plt.xlabel('Time Index')
-    plt.ylabel('Log BTC Price') 
-    plt.title(f'GP State (iter {iteration}) | min={minval:.4f} | {current_date.strftime("%Y-%m-%d")} | {len(X_current)} pts')
-    plt.legend()
-    plt.grid(True, alpha=0.3)
-    plot_filename = f'gp_backtest_state_iter_{iteration}_{minval:.4f}.png'
-    plt.savefig(plot_filename, dpi=150, bbox_inches='tight')
-    plt.close()
-    print(f"Saved GP state plot: {plot_filename}")
-
-def print_backtest_stats(best_kernel_params, static):
-    df, cfg, utility_func = static['df'], static['cfg'], static['utility_func']
-    start_idx, end_idx = static['start_idx'], static['end_idx']
-
-    strategic_wealth = cfg.starting_wealth
-    cash_wealth = cfg.starting_wealth
-    btc_wealth = cfg.starting_wealth
-
-    strategic_allocations = []
-    strategic_wealths = []
-    cash_wealths = []
-    btc_wealths = []
-    dates = []
-    btc_prices = []
-
-    initial_btc_price = df.iloc[start_idx]['price']
-    btc_holdings = btc_wealth / initial_btc_price
-
-    kernel = build_fixed_kernel(
-        rbf_lengthscale=best_kernel_params[0],
-        rbf_constant=best_kernel_params[1],
-        periodic_lengthscale=best_kernel_params[2],
-        periodic_period=best_kernel_params[3],
-        periodic_constant=best_kernel_params[4],
-        noise_level=best_kernel_params[5]
-    )
-
-    prev_strategic_cash = strategic_wealth
-    prev_strategic_btc = 0.0
-
-    for current_idx in range(start_idx, end_idx + 1):
-        current_price = df.iloc[current_idx]['price']
-        current_date = df.iloc[current_idx]['timestamp']
-        data_up_to_now = df.iloc[0:current_idx + 1].copy()
-        X_current = data_up_to_now.index.values
-        y_current = np.log(data_up_to_now['price'].astype(float).values)
-
-        try:
-            log_params = fit_log_trend(X_current, y_current)
-            log_trend = create_log_trend_function(log_params)
-            residuals = y_current - log_trend(X_current)
-        except Exception:
-            log_trend = lambda x: np.mean(y_current)
-            residuals = y_current - log_trend(X_current)
-
-        try:
-            gp_model = fit_gp(X_current, residuals, kernel, opt=False)
-        except Exception:
-            optimal_btc_allocation = 0.5
-
-        # Make predictions for portfolio optimization
-        try:
-            future_X = np.arange(current_idx + 1, current_idx + 1 + cfg.horizon_weeks)
-            X_pred = future_X.reshape(-1, 1)
-            y_resid_pred, y_std = gp_model.predict(X_pred, return_std=True)
-            log_price_pred = y_resid_pred + log_trend(future_X)
-            mu_seq = log_price_pred
-            optimal_btc_allocation = float(mu_seq[0] > np.log(current_price))
-        except Exception:
-            optimal_btc_allocation = 0.5
-
-        if current_idx > start_idx:
-            strategic_wealth = prev_strategic_cash + prev_strategic_btc * current_price
-            btc_wealth = btc_holdings * current_price
-
-        strategic_cash = strategic_wealth * (1 - optimal_btc_allocation)
-        strategic_btc = strategic_wealth * optimal_btc_allocation / current_price
-        prev_strategic_cash = strategic_cash
-        prev_strategic_btc = strategic_btc
-
-        strategic_allocations.append(optimal_btc_allocation)
-        strategic_wealths.append(strategic_wealth)
-        cash_wealths.append(cash_wealth)
-        btc_wealths.append(btc_wealth)
-        dates.append(current_date)
-        btc_prices.append(current_price)
-
+    # At the end of the function, after computing minval:
     final_strategic = strategic_wealths[-1]
     final_cash = cash_wealths[-1]
     final_btc = btc_wealths[-1]
@@ -310,6 +221,36 @@ def print_backtest_stats(best_kernel_params, static):
     print(f"  Strategic volatility:   {np.std(strategic_returns)*100:7.2f}%")
     print(f"  BTC volatility:         {np.std(btc_returns)*100:7.2f}%")
     print()
+
+    return minval
+
+def plot_backtesting_gp_state_final(gp_model, X_current, y_current, current_date, cfg, iteration, minval):
+    """Plot GP state after full backtest for a given kernel hyperparameter set."""
+    import matplotlib.pyplot as plt
+
+    X_plot = np.linspace(X_current.min(), X_current.max() + 208, 500)
+    y_pred_plot, y_std_plot = gp_model.predict(X_plot.reshape(-1, 1), return_std=True)
+    log_trend = create_log_trend_function(fit_log_trend(X_current, y_current))
+    y_pred_with_trend = y_pred_plot + log_trend(X_plot)
+    y_trend_plot = log_trend(X_plot)
+
+    plt.figure(figsize=(12, 8))
+    plt.plot(X_current, y_current, 'kx', label='Historical BTC Log Prices', markersize=4, alpha=0.8)
+    plt.plot(X_plot, y_trend_plot, 'r-', label='Log Trend', linewidth=2)
+    plt.plot(X_plot, y_pred_with_trend, 'b-', label='GP Prediction', linewidth=2)
+    plt.fill_between(X_plot, 
+                     y_pred_with_trend - y_std_plot, 
+                     y_pred_with_trend + y_std_plot,
+                     alpha=0.2, label='GP 1σ', color='skyblue')
+    plt.xlabel('Time Index')
+    plt.ylabel('Log BTC Price') 
+    plt.title(f'GP State (iter {iteration}) | min={minval:.4f} | {current_date.strftime("%Y-%m-%d")} | {len(X_current)} pts')
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+    plot_filename = f'gp_backtest_state_iter_{iteration}_{minval:.4f}.png'
+    plt.savefig(plot_filename, dpi=150, bbox_inches='tight')
+    plt.close()
+    print(f"Saved GP state plot: {plot_filename}")
 
 def main():
     cfg = Config()
@@ -363,7 +304,6 @@ def main():
     for name, val in zip([d.name for d in space], result.x):
         print(f"  {name}: {val:.4f}")
     print(f"Best (max) utility: {-result.fun:.4f}")
-    print_backtest_stats(result.x, static)
 
 if __name__ == "__main__":
     main()
