@@ -293,12 +293,12 @@ def main(cfg: Config = Config()):
         optimal_p, max_util = coordinate_descent_refinement(bayesian_p, mu_seq, sigma_seq, current_log_price, cfg, grid_points_per_dim)
     elif cfg.optimisation_method == "forest_minimize":
         print("\nRunning Forest Minimize Optimisation...")
-        forest_p, forest_util, result = run_forest_minimize_optimisation(cfg, mu_seq, sigma_seq, current_log_price, T, grid_points_per_dim)
+        optimal_p, max_util, result = run_forest_minimize_optimisation(cfg, mu_seq, sigma_seq, current_log_price, T, grid_points_per_dim)
         print(f"\nForest Minimize optimization result:")
-        print(f"Allocation: {np.round(forest_p, 3)}")
-        print(f"Utility: {forest_util:.6f}")
+        print(f"Allocation: {np.round(optimal_p, 3)}")
+        print(f"Utility: {max_util:.6f}")
 
-        optimal_p, max_util = coordinate_descent_refinement(forest_p, mu_seq, sigma_seq, current_log_price, cfg, grid_points_per_dim)
+        # optimal_p, max_util = coordinate_descent_refinement(optimal_p, mu_seq, sigma_seq, current_log_price, cfg, grid_points_per_dim)
 
 
     print(f"\nFinal optimal allocation:")

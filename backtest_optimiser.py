@@ -25,7 +25,7 @@ class Config:
     data_path: str = os.path.join(PROJECT_ROOT, 'a_data', 'bitcoin_combined_weekly_data.csv')
     starting_wealth: float = 1000
     start_datetime: str = "2019-01-01"
-    end_datetime: str = "2019-03-01"
+    end_datetime: str = "2019-06-01"
     preference_curve: str = 'identity'
     horizon_weeks: int = 1
     rebalance_every: int = 1
@@ -58,11 +58,11 @@ def optimize_portfolio_for_current_state(current_log_price, mu_seq, sigma_seq, c
         optimal_p, max_util = coordinate_descent_refinement(
             bayesian_p, mu_seq, sigma_seq, current_log_price, opt_config, grid_points_per_dim)
     elif cfg.optimisation_method == "forest_minimize":
-        forest_p, forest_util, result = run_forest_minimize_optimisation(
+        optimal_p, max_util, result = run_forest_minimize_optimisation(
             opt_config, mu_seq, sigma_seq, current_log_price, T, grid_points_per_dim)
-        print(f"Allocation: {np.round(forest_p, 3)}")
-        optimal_p, max_util = coordinate_descent_refinement(
-            forest_p, mu_seq, sigma_seq, current_log_price, opt_config, grid_points_per_dim)
+        # print(f"Allocation: {np.round(optimal_p, 3)}")
+        # optimal_p, max_util = coordinate_descent_refinement(
+        #     optimal_p, mu_seq, sigma_seq, current_log_price, opt_config, grid_points_per_dim)
     return optimal_p[0]
 
 def create_log_trend_function(params):
