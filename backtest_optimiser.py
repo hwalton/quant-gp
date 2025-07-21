@@ -25,7 +25,7 @@ class Config:
     data_path: str = os.path.join(PROJECT_ROOT, 'a_data', 'bitcoin_combined_weekly_data.csv')
     starting_wealth: float = 1000
     start_datetime: str = "2019-01-01"
-    end_datetime: str = "2019-02-01"
+    end_datetime: str = "2019-03-01"
     preference_curve: str = 'identity'
     horizon_weeks: int = 1
     rebalance_every: int = 1
@@ -137,12 +137,20 @@ def backtest_objective(kernel_params, static, iteration=None):
             mu_seq = log_price_pred
             sigma_seq = log_price_std
 
-            # Portfolio optimization (always use identity utility)
-            optimal_btc_allocation = 0.5
             try:
-                # Use a simple one-step allocation for speed
-                optimal_btc_allocation = mu_seq[0] > np.log(current_price)
-                optimal_btc_allocation = float(optimal_btc_allocation)
+                future_X = np.arange(current_idx + 1, current_idx + 1 + cfg.horizon_weeks)
+                X_pred = future_X.reshape(-1, 1)
+                y_resid_pred, y_std = gp_model.predict(X_pred, return_std=True)
+                log_price_pred = y_resid_pred + log_trend(future_X)
+                log_price_std = y_std
+                mu_seq = log_price_pred
+                sigma_seq = log_price_std
+
+                # Use the full optimizer for allocation (uses mean and variance)
+                current_log_price = np.log(current_price)
+                optimal_btc_allocation = optimize_portfolio_for_current_state(
+                    current_log_price, mu_seq, sigma_seq, cfg
+                )
             except Exception:
                 optimal_btc_allocation = 0.5
         except Exception:
@@ -179,50 +187,40 @@ def backtest_objective(kernel_params, static, iteration=None):
     final_cash = cash_wealths[-1]
     final_btc = btc_wealths[-1]
 
-    print("="*60)
-    print("BACKTESTING RESULTS")
-    print("="*60)
-    print(f"Period: {cfg.start_datetime} to {cfg.end_datetime}")
-    print(f"Initial wealth: ${cfg.starting_wealth:,.2f}\n")
-    print("FINAL WEALTH:")
-    print(f"  Strategic Portfolio: ${final_strategic:,.2f}")
-    print(f"  Cash Only:          ${final_cash:,.2f}")
-    print(f"  BTC Only:           ${final_btc:,.2f}\n")
-
     strategic_return = (final_strategic / cfg.starting_wealth - 1) * 100
     cash_return = (final_cash / cfg.starting_wealth - 1) * 100
     btc_return = (final_btc / cfg.starting_wealth - 1) * 100
 
-    print("TOTAL RETURNS:")
-    print(f"  Strategic Portfolio: {strategic_return:+7.2f}%")
-    print(f"  Cash Only:          {cash_return:+7.2f}%")
-    print(f"  BTC Only:           {btc_return:+7.2f}%\n")
-
     strategic_vs_cash = strategic_return - cash_return
     strategic_vs_btc = strategic_return - btc_return
-
-    print("OUTPERFORMANCE:")
-    print(f"  Strategic vs Cash:   {strategic_vs_cash:+7.2f}%")
-    print(f"  Strategic vs BTC:    {strategic_vs_btc:+7.2f}%\n")
 
     strategic_wealths = np.array(strategic_wealths)
     btc_wealths = np.array(btc_wealths)
     strategic_allocations = np.array(strategic_allocations)
 
-    print("PORTFOLIO STATISTICS:")
-    print(f"  Average BTC allocation: {np.mean(strategic_allocations):7.2%}")
-    print(f"  Min BTC allocation:     {np.min(strategic_allocations):7.2%}")
-    print(f"  Max BTC allocation:     {np.max(strategic_allocations):7.2%}")
-    print(f"  Allocation volatility:  {np.std(strategic_allocations):7.2%}")
-
     strategic_returns = np.diff(strategic_wealths) / strategic_wealths[:-1]
     btc_returns = np.diff(btc_wealths) / btc_wealths[:-1]
 
-    print(f"  Strategic volatility:   {np.std(strategic_returns)*100:7.2f}%")
-    print(f"  BTC volatility:         {np.std(btc_returns)*100:7.2f}%")
-    print()
-
-    return minval
+    # At the end of backtest_objective, after all calculations:
+    stats = {
+        "final_strategic": final_strategic,
+        "final_cash": final_cash,
+        "final_btc": final_btc,
+        "strategic_return": strategic_return,
+        "cash_return": cash_return,
+        "btc_return": btc_return,
+        "strategic_vs_cash": strategic_vs_cash,
+        "strategic_vs_btc": strategic_vs_btc,
+        "avg_alloc": np.mean(strategic_allocations),
+        "min_alloc": np.min(strategic_allocations),
+        "max_alloc": np.max(strategic_allocations),
+        "alloc_vol": np.std(strategic_allocations),
+        "strategic_vol": np.std(strategic_returns)*100,
+        "btc_vol": np.std(btc_returns)*100,
+        "period": (cfg.start_datetime, cfg.end_datetime),
+        "initial_wealth": cfg.starting_wealth,
+    }
+    return minval, stats
 
 def plot_backtesting_gp_state_final(gp_model, X_current, y_current, current_date, cfg, iteration, minval):
     """Plot GP state after full backtest for a given kernel hyperparameter set."""
@@ -281,20 +279,27 @@ def main():
     ]
 
     iteration_counter = {'i': 1}
+    best_stats = None
+    best_minval = None
+
     @use_named_args(space)
     def objective_wrapped(**params):
         param_list = [params[name] for name in [d.name for d in space]]
         iteration = iteration_counter['i']
-        minval = backtest_objective(param_list, static, iteration=iteration)
+        minval, stats = backtest_objective(param_list, static, iteration=iteration)
         iteration_counter['i'] += 1
+        nonlocal best_stats, best_minval
+        if best_minval is None or minval < best_minval:
+            best_minval = minval
+            best_stats = stats
         return minval
 
     print("Starting hyperparameter optimization (this may take a while)...")
     result = gp_minimize(
         objective_wrapped,
         space,
-        n_calls=30,
-        n_initial_points=12,
+        n_calls=2,
+        n_initial_points=1,
         acq_func="EI",
         random_state=42,
         verbose=True
@@ -302,8 +307,34 @@ def main():
 
     print("\nBest kernel parameters found:")
     for name, val in zip([d.name for d in space], result.x):
-        print(f"  {name}: {val:.4f}")
+        print(f"  {name}={val:.12f},")
     print(f"Best (max) utility: {-result.fun:.4f}")
+
+    if best_stats is not None:
+        print("="*60)
+        print("BACKTESTING RESULTS")
+        print("="*60)
+        print(f"Period: {best_stats['period'][0]} to {best_stats['period'][1]}")
+        print(f"Initial wealth: ${best_stats['initial_wealth']:,.2f}\n")
+        print("FINAL WEALTH:")
+        print(f"  Strategic Portfolio: ${best_stats['final_strategic']:,.2f}")
+        print(f"  Cash Only:          ${best_stats['final_cash']:,.2f}")
+        print(f"  BTC Only:           ${best_stats['final_btc']:,.2f}\n")
+        print("TOTAL RETURNS:")
+        print(f"  Strategic Portfolio: {best_stats['strategic_return']:+7.2f}%")
+        print(f"  Cash Only:          {best_stats['cash_return']:+7.2f}%")
+        print(f"  BTC Only:           {best_stats['btc_return']:+7.2f}%\n")
+        print("OUTPERFORMANCE:")
+        print(f"  Strategic vs Cash:   {best_stats['strategic_vs_cash']:+7.2f}%")
+        print(f"  Strategic vs BTC:    {best_stats['strategic_vs_btc']:+7.2f}%\n")
+        print("PORTFOLIO STATISTICS:")
+        print(f"  Average BTC allocation: {best_stats['avg_alloc']:7.2%}")
+        print(f"  Min BTC allocation:     {best_stats['min_alloc']:7.2%}")
+        print(f"  Max BTC allocation:     {best_stats['max_alloc']:7.2%}")
+        print(f"  Allocation volatility:  {best_stats['alloc_vol']:7.2%}")
+        print(f"  Strategic volatility:   {best_stats['strategic_vol']:7.2f}%")
+        print(f"  BTC volatility:         {best_stats['btc_vol']:7.2f}%")
+        print()
 
 if __name__ == "__main__":
     main()
