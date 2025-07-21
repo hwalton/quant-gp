@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 from scipy.stats import norm
-from skopt import gp_minimize
+from skopt import gp_minimize, forest_minimize
 from skopt.space import Real
 from skopt.utils import use_named_args
 import time
@@ -31,8 +31,9 @@ def calculate_grid_parameters(T, max_total_paths=1000000):
         grid_points_per_dim -= 1
         actual_paths = grid_points_per_dim ** T
     
-    print(f"Using {grid_points_per_dim} grid points per dimension for {T} dimensions")
-    print(f"Total paths: {actual_paths:,}")
+    if VERBOSE:
+        print(f"Using {grid_points_per_dim} grid points per dimension for {T} dimensions")
+        print(f"Total paths: {actual_paths:,}")
     
     return grid_points_per_dim, actual_paths
 
@@ -230,6 +231,35 @@ def coordinate_descent_refinement(initial_p, mu_seq, sigma_seq, current_log_pric
     
     return current_p, current_utility
 
+def run_forest_minimize_optimisation(cfg, mu_seq, sigma_seq, current_log_price, months, grid_points_per_dim):
+    """
+    Run Forest-based Bayesian optimization for portfolio allocation.
+    """
+    print("HW DEBUG: func run_forest_minimize_optimisation called")
+    search_space = [Real(0.0, 1.0, name=f"p{i}") for i in range(months)]
+
+    @use_named_args(search_space)
+    def objective_wrapped(**kwargs):
+        p = np.array([kwargs[f"p{i}"] for i in range(months)])
+        util = objective_func(p, mu_seq, sigma_seq, current_log_price, cfg, grid_points_per_dim)
+        return -util  # Negative for minimisation
+
+    result = forest_minimize(
+        func=objective_wrapped,
+        dimensions=search_space,
+        n_calls=cfg.n_calls_optimiser,
+        n_initial_points=15,
+        acq_func="EI",
+        random_state=42,
+        verbose=VERBOSE,
+        n_jobs=-1  # parallelism supported
+    )
+
+    optimal_p = np.array(result.x)
+    max_utility = -result.fun
+
+    return optimal_p, max_utility, result
+
 def main(cfg: Config = Config()):
     start_time = time.time()
 
@@ -263,6 +293,15 @@ def main(cfg: Config = Config()):
         print(f"Utility: {bayesian_util:.6f}")
 
         optimal_p, max_util = coordinate_descent_refinement(bayesian_p, mu_seq, sigma_seq, current_log_price, cfg, grid_points_per_dim)
+    elif cfg.optimisation_method == "forest_minimize":
+        print("\nRunning Forest Minimize Optimisation...")
+        forest_p, forest_util, result = run_forest_minimize_optimisation(cfg, mu_seq, sigma_seq, current_log_price, T, grid_points_per_dim)
+        print(f"\nForest Minimize optimization result:")
+        print(f"Allocation: {np.round(forest_p, 3)}")
+        print(f"Utility: {forest_util:.6f}")
+
+        optimal_p, max_util = coordinate_descent_refinement(forest_p, mu_seq, sigma_seq, current_log_price, cfg, grid_points_per_dim)
+
 
     print(f"\nFinal optimal allocation:")
     print(f"Allocation: {np.round(optimal_p, 3)}")

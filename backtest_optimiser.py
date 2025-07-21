@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime
 import os
 import sys
-from skopt import gp_minimize
+from skopt import gp_minimize, forest_minimize
 from skopt.space import Real
 from skopt.utils import use_named_args
 
@@ -17,7 +17,7 @@ from c_gp_fit.gp_fit import fit_gp, build_fixed_kernel
 
 from d_optimise_portfolio.config import Config as OptimiseConfig
 from d_optimise_portfolio.get_utility_function import get_utility_func
-from d_optimise_portfolio.optimise_portfolio import load_gp_predictions, objective_func, run_bayesian_optimisation, coordinate_descent_refinement, calculate_grid_parameters
+from d_optimise_portfolio.optimise_portfolio import load_gp_predictions, objective_func, run_bayesian_optimisation, coordinate_descent_refinement, calculate_grid_parameters, run_forest_minimize_optimisation
 from d_optimise_portfolio.config import Config as OptimiseConfig
 
 @dataclass(frozen=True)
@@ -29,7 +29,7 @@ class Config:
     preference_curve: str = 'identity'
     horizon_weeks: int = 1
     rebalance_every: int = 1
-    optimisation_method: str = 'bayesian_with_refinement'
+    optimisation_method: str = 'forest_minimize'  # 'bayesian', 'bayesian_with_refinement', or 'forest_minimize'
     n_calls_optimiser: int = 15
     gamma: float = 5
     step_threshold: float = 1100
@@ -57,6 +57,16 @@ def optimize_portfolio_for_current_state(current_log_price, mu_seq, sigma_seq, c
             opt_config, mu_seq, sigma_seq, current_log_price, T, grid_points_per_dim)
         optimal_p, max_util = coordinate_descent_refinement(
             bayesian_p, mu_seq, sigma_seq, current_log_price, opt_config, grid_points_per_dim)
+        print("HW DEBUG: optimal_p bayesian wr:", optimal_p, "max_util:", max_util)
+    elif cfg.optimisation_method == "forest_minimize":
+        print("HW DEBUG: Running Forest Minimize Optimisation...")
+        forest_p, forest_util, result = run_forest_minimize_optimisation(
+            cfg, mu_seq, sigma_seq, current_log_price, T, grid_points_per_dim)
+        print(f"HW DEBUG: Forest Minimize optimization result:")
+        print(f"Allocation: {np.round(forest_p, 3)}")
+        optimal_p, max_util = coordinate_descent_refinement(
+            forest_p, mu_seq, sigma_seq, current_log_price, cfg, grid_points_per_dim)
+        print("HW DEBUG: optimal_p forest:", optimal_p, "max_util:", max_util)
     return optimal_p[0]
 
 def create_log_trend_function(params):
@@ -292,18 +302,31 @@ def main():
         if best_minval is None or minval < best_minval:
             best_minval = minval
             best_stats = stats
+        print(f"Iteration {iteration}: minval={minval:.4f}, params={param_list}")
         return minval
 
     print("Starting hyperparameter optimization (this may take a while)...")
-    result = gp_minimize(
-        objective_wrapped,
-        space,
-        n_calls=2,
-        n_initial_points=1,
-        acq_func="EI",
-        random_state=42,
-        verbose=True
-    )
+    if cfg.optimisation_method == "bayesian" or cfg.optimisation_method == "bayesian_with_refinement" or cfg.optimisation_method == "forest_minimize":
+        result = gp_minimize(
+            objective_wrapped,
+            space,
+            n_calls=cfg.n_calls_optimiser,
+            n_initial_points=10,
+            acq_func="EI",
+            random_state=42,
+            verbose=True
+        )
+    elif cfg.optimisation_method == "forest_minimizes":
+        result = forest_minimize(
+            func=objective_wrapped,
+            dimensions=space,
+            n_calls=cfg.n_calls_optimiser,
+            n_initial_points=15,
+            acq_func="EI",
+            random_state=42,
+            verbose=False,
+            n_jobs=-1  # parallelism supported
+        )
 
     print("\nBest kernel parameters found:")
     for name, val in zip([d.name for d in space], result.x):
