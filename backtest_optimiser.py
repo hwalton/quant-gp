@@ -25,7 +25,7 @@ class Config:
     data_path: str = os.path.join(PROJECT_ROOT, 'a_data', 'bitcoin_combined_weekly_data.csv')
     starting_wealth: float = 1000
     start_datetime: str = "2019-01-01"
-    end_datetime: str = "2023-01-01"
+    end_datetime: str = "2020-01-01"
     preference_curve: str = 'identity'
     horizon_weeks: int = 1
     rebalance_every: int = 1
@@ -215,7 +215,7 @@ def main():
         Real(0.001, 0.1, name='noise_level')
     ]
 
-    iteration_counter = {'i': 0}
+    iteration_counter = {'i': 1}
     @use_named_args(space)
     def objective_wrapped(**params):
         param_list = [params[name] for name in [d.name for d in space]]
@@ -228,8 +228,8 @@ def main():
     result = gp_minimize(
         objective_wrapped,
         space,
-        n_calls=20,
-        n_initial_points=10,
+        n_calls=30,
+        n_initial_points=12,
         acq_func="EI",
         random_state=42,
         verbose=True
