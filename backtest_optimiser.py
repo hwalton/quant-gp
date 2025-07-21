@@ -25,12 +25,12 @@ class Config:
     data_path: str = os.path.join(PROJECT_ROOT, 'a_data', 'bitcoin_combined_weekly_data.csv')
     starting_wealth: float = 1000
     start_datetime: str = "2019-01-01"
-    end_datetime: str = "2019-06-01"
+    end_datetime: str = "2023-01-01"
     preference_curve: str = 'identity'
     horizon_weeks: int = 1
     rebalance_every: int = 1
     optimisation_method: str = 'forest_minimize'  # 'bayesian', 'bayesian_with_refinement', or 'forest_minimize'
-    n_calls_optimiser: int = 16
+    n_calls_optimiser: int = 20
     gamma: float = 5
     step_threshold: float = 1100
     step_steepness: float = 100.0
@@ -317,7 +317,7 @@ def main():
             func=objective_wrapped,
             dimensions=space,
             n_calls=cfg.n_calls_optimiser,
-            n_initial_points=15,
+            n_initial_points=8,
             acq_func="EI",
             random_state=42,
             verbose=False,

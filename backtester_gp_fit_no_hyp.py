@@ -13,7 +13,7 @@ sys.path.append(PROJECT_ROOT)
 from utils.utils import load_data
 from b_log_fit.log_fit import fit_log_trend, log_func, Config as LogFitConfig
 from c_gp_fit.gp_fit import fit_gp, build_fixed_kernel, predict_gp, Config as GPFitConfig
-from d_optimise_portfolio.optimise_portfolio import load_gp_predictions, objective_func, run_bayesian_optimisation, coordinate_descent_refinement, calculate_grid_parameters
+from d_optimise_portfolio.optimise_portfolio import load_gp_predictions, objective_func, run_bayesian_optimisation, coordinate_descent_refinement, calculate_grid_parameters, run_forest_minimize_optimisation
 from d_optimise_portfolio.config import Config as OptimiseConfig
 
 @dataclass(frozen=True)
@@ -21,11 +21,11 @@ class Config:
     data_path: str = os.path.join(PROJECT_ROOT, 'a_data', 'bitcoin_combined_weekly_data.csv')
     starting_wealth: float = 1000
     start_datetime: str = "2019-01-01"
-    end_datetime: str = "2019-03-01"
+    end_datetime: str = "2023-01-01"
     preference_curve: str = 'identity'
     horizon_weeks: int = 1
     rebalance_every: int = 1
-    optimisation_method: str = 'bayesian_with_refinement'
+    optimisation_method: str = 'forest_minimize' # Options: 'bayesian', 'bayesian_with_refinement', 'forest_minimize'
     n_calls_optimiser: int = 15
     gamma: float = 5
     step_threshold: float = 1100
@@ -58,6 +58,12 @@ def optimize_portfolio_for_current_state(current_log_price, mu_seq, sigma_seq, c
             opt_config, mu_seq, sigma_seq, current_log_price, T, grid_points_per_dim)
         optimal_p, max_util = coordinate_descent_refinement(
             bayesian_p, mu_seq, sigma_seq, current_log_price, opt_config, grid_points_per_dim)
+    elif cfg.optimisation_method == "forest_minimize":
+        optimal_p, max_util, result = run_forest_minimize_optimisation(
+            opt_config, mu_seq, sigma_seq, current_log_price, T, grid_points_per_dim)
+        # print(f"Allocation: {np.round(optimal_p, 3)}")
+        # optimal_p, max_util = coordinate_descent_refinement(
+        #     optimal_p, mu_seq, sigma_seq, current_log_price, opt_config, grid_points_per_dim)
     return optimal_p[0]
 
 def plot_backtesting_gp_state(gp_model, X_current, y_current, current_date, cfg):
@@ -148,12 +154,12 @@ def main(cfg: Config = Config()):
         # periodic_period=205.4258,
         # periodic_constant=0.1046,
         # noise_level=0.0218
-        rbf_lengthscale=16.134316750344,
-        rbf_constant=0.448526100746,
-        periodic_lengthscale=7.818940902700,
-        periodic_period=219.370031589297,
-        periodic_constant=0.947082230422,
-        noise_level=0.010897516666,
+        rbf_lengthscale=15.199082092610,
+        rbf_constant=1.125415051539,
+        periodic_lengthscale=5.908836540072,
+        periodic_period=293.051061452828,
+        periodic_constant=1.253365070605,
+        noise_level=0.028323919020,
     )
 
     for current_idx in range(start_idx, end_idx + 1):

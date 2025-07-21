@@ -17,13 +17,13 @@ class Config:
     y_std_pkl: str = Y_STD_PKL
     price_csv: str = DATA_PATH
     initial_wealth: float = 1000
-    preference_curve: str = ['step', 'coordinate_points', 'log_risk_averse', 'general_risk_level', 'max_expected_wealth'][1]
+    preference_curve: str = ['step', 'coordinate_points', 'log_risk_averse', 'general_risk_level', 'max_expected_wealth', 'identity'][5]
     gamma: float = 5  # Only used if utility_function is 'crra'
     step_threshold: float = 1100
     step_steepness: float = 100.0
 
-    horizon_weeks: int = 4
-    rebalance_every: int = 4  # weeks
+    horizon_weeks: int = 12*2
+    rebalance_every: int = 12  # weeks
 
     optimisation_method: str = ['bayesian', 'bayesian_with_refinement', 'forest_minimize'][2]  # Add type annotation
     
