@@ -235,7 +235,6 @@ def run_forest_minimize_optimisation(cfg, mu_seq, sigma_seq, current_log_price, 
     """
     Run Forest-based Bayesian optimization for portfolio allocation.
     """
-    print("HW DEBUG: func run_forest_minimize_optimisation called")
     search_space = [Real(0.0, 1.0, name=f"p{i}") for i in range(months)]
 
     @use_named_args(search_space)
@@ -251,10 +250,9 @@ def run_forest_minimize_optimisation(cfg, mu_seq, sigma_seq, current_log_price, 
         n_initial_points=15,
         acq_func="EI",
         random_state=42,
-        verbose=VERBOSE,
+        verbose=False,
         n_jobs=-1  # parallelism supported
     )
-
     optimal_p = np.array(result.x)
     max_utility = -result.fun
 

@@ -25,12 +25,12 @@ class Config:
     data_path: str = os.path.join(PROJECT_ROOT, 'a_data', 'bitcoin_combined_weekly_data.csv')
     starting_wealth: float = 1000
     start_datetime: str = "2019-01-01"
-    end_datetime: str = "2019-06-01"
+    end_datetime: str = "2019-03-01"
     preference_curve: str = 'identity'
     horizon_weeks: int = 1
     rebalance_every: int = 1
-    optimisation_method: str = 'bayesian_with_refinement'  # 'bayesian', 'bayesian_with_refinement', or 'forest_minimize'
-    n_calls_optimiser: int = 25
+    optimisation_method: str = 'forest_minimize'  # 'bayesian', 'bayesian_with_refinement', or 'forest_minimize'
+    n_calls_optimiser: int = 16
     gamma: float = 5
     step_threshold: float = 1100
     step_steepness: float = 100.0
@@ -59,10 +59,10 @@ def optimize_portfolio_for_current_state(current_log_price, mu_seq, sigma_seq, c
             bayesian_p, mu_seq, sigma_seq, current_log_price, opt_config, grid_points_per_dim)
     elif cfg.optimisation_method == "forest_minimize":
         forest_p, forest_util, result = run_forest_minimize_optimisation(
-            cfg, mu_seq, sigma_seq, current_log_price, T, grid_points_per_dim)
+            opt_config, mu_seq, sigma_seq, current_log_price, T, grid_points_per_dim)
         print(f"Allocation: {np.round(forest_p, 3)}")
         optimal_p, max_util = coordinate_descent_refinement(
-            forest_p, mu_seq, sigma_seq, current_log_price, cfg, grid_points_per_dim)
+            forest_p, mu_seq, sigma_seq, current_log_price, opt_config, grid_points_per_dim)
     return optimal_p[0]
 
 def create_log_trend_function(params):
@@ -302,17 +302,17 @@ def main():
         return minval
 
     print("Starting hyperparameter optimization (this may take a while)...")
-    if cfg.optimisation_method == "bayesian" or cfg.optimisation_method == "bayesian_with_refinement" or cfg.optimisation_method == "forest_minimize":
+    if cfg.optimisation_method == "bayesian" or cfg.optimisation_method == "bayesian_with_refinement" or cfg.optimisation_method == "forest_minimizes":
         result = gp_minimize(
             objective_wrapped,
             space,
             n_calls=cfg.n_calls_optimiser,
-            n_initial_points=10,
+            n_initial_points=8,
             acq_func="EI",
             random_state=42,
             verbose=True
         )
-    elif cfg.optimisation_method == "forest_minimizes":
+    elif cfg.optimisation_method == "forest_minimize":
         result = forest_minimize(
             func=objective_wrapped,
             dimensions=space,
