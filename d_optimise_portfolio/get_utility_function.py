@@ -50,7 +50,7 @@ def get_preference_curve(cfg: Config):
             log_w = np.asarray(log_w)
             w = np.exp(log_w)  # Convert log back to wealth
             # Get coordinate points from config
-            points = getattr(cfg, 'preference_points', [(100, -1), (500, -0.25), (700, 0.5), (10000, 0.9)])
+            points = getattr(cfg, 'preference_points', [(100, -1), (500, -0.25), (1300, 0.6), (10000, 0.9)])
             
             return _fit_preference_curve(w, points)
         
