@@ -142,12 +142,12 @@ def main(cfg: Config = Config()):
 
     # Build kernel ONCE with fixed hyperparameters
     kernel = build_fixed_kernel(
-        rbf_lengthscale=10.0,
-        rbf_constant=1.0,
-        periodic_lengthscale=10.0,
-        periodic_period=298.0,
-        periodic_constant=1.0,
-        noise_level=1.0
+        rbf_lengthscale=3.8,
+        rbf_constant=0.618,
+        periodic_lengthscale=0.86,
+        periodic_period=187.0,
+        periodic_constant=0.641,
+        noise_level=0.0142
     )
 
     for current_idx in range(start_idx, end_idx + 1):

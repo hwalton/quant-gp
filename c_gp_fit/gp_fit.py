@@ -26,7 +26,7 @@ class Config:
     plot_path: str = os.path.join(PROJECT_ROOT, 'c_gp_fit', 'gp_output.png')
     points_into_future: int = 48*3
     y_limit: tuple =(4, 18)
-    hyperparameter_optimisation: bool = False
+    hyperparameter_optimisation: bool = True
 
 def load_data(cfg: Config):
     df = pd.read_csv(cfg.data_path, sep=',')
