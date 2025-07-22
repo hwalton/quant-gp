@@ -56,24 +56,24 @@ def load_saved_predictions(cfg: Config):
 
 def build_kernel():
     return (
-        C(1.0, (1e-3, 1e3)) * RBF(length_scale=10.0, length_scale_bounds=(1.0, 100.0)) +
-        C(1.0, (1e-3, 1.0)) * ExpSineSquared(length_scale=10.0, periodicity=208.0,
-                                             length_scale_bounds=(0.1, 100.0),
-                                             periodicity_bounds=(150, 300)) +
-        WhiteKernel(noise_level=1, noise_level_bounds=(0.005, 200.0))
+        # C(1.0, (1e-3, 1e3)) * RBF(length_scale=10.0, length_scale_bounds=(1.0, 100.0)) +
+        # C(1.0, (1e-3, 1.0)) * ExpSineSquared(length_scale=10.0, periodicity=208.0,
+        #                                      length_scale_bounds=(0.1, 100.0),
+        #                                      periodicity_bounds=(150, 300)) +
+        WhiteKernel(noise_level=1.5, noise_level_bounds=(0.005, 200.0))
     )
 
 def build_fixed_kernel(
-    rbf_lengthscale=10.0,
-    rbf_constant=1.0,
-    periodic_lengthscale=10.0,
-    periodic_period=218.0,
-    periodic_constant=1.0,
-    noise_level=1.0
+    # rbf_lengthscale=10.0,
+    # rbf_constant=1.0,
+    # periodic_lengthscale=10.0,
+    # periodic_period=218.0,
+    # periodic_constant=1.0,
+    noise_level=1.5
 ):
     return (
-        C(rbf_constant) * RBF(length_scale=rbf_lengthscale) +
-        C(periodic_constant) * ExpSineSquared(length_scale=periodic_lengthscale, periodicity=periodic_period) +
+        # C(rbf_constant) * RBF(length_scale=rbf_lengthscale) +
+        # C(periodic_constant) * ExpSineSquared(length_scale=periodic_lengthscale, periodicity=periodic_period) +
         WhiteKernel(noise_level=noise_level)
     )
 

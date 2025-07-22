@@ -148,12 +148,12 @@ def main(cfg: Config = Config()):
 
     # Build kernel ONCE with fixed hyperparameters
     kernel = build_fixed_kernel(
-        rbf_lengthscale=3.6,
-        rbf_constant=0.345744,
-        periodic_lengthscale=0.692,
-        periodic_period=204.0,
-        periodic_constant=0.509796,
-        noise_level=0.0134
+        # rbf_lengthscale=3.6,
+        # rbf_constant=0.345744,
+        # periodic_lengthscale=0.692,
+        # periodic_period=204.0,
+        # periodic_constant=0.509796,
+        noise_level=1.5
         # rbf_lengthscale=2.726979908019,
         # rbf_constant=1.751093835483,
         # periodic_lengthscale=0.503437502578,
