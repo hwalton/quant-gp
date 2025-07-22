@@ -13,19 +13,19 @@ sys.path.append(PROJECT_ROOT)
 from utils.utils import load_data
 from b_log_fit.log_fit import fit_log_trend, log_func, Config as LogFitConfig
 from c_gp_fit.gp_fit import fit_gp, build_kernel, predict_gp, Config as GPFitConfig
-from d_optimise_portfolio.optimise_portfolio import load_gp_predictions, objective_func, run_bayesian_optimisation, coordinate_descent_refinement, calculate_grid_parameters
+from d_optimise_portfolio.optimise_portfolio import load_gp_predictions, objective_func, run_bayesian_optimisation, coordinate_descent_refinement, calculate_grid_parameters, run_forest_minimize_optimisation
 from d_optimise_portfolio.config import Config as OptimiseConfig
 
 @dataclass(frozen=True)
 class Config:
     data_path: str = os.path.join(PROJECT_ROOT, 'a_data', 'bitcoin_combined_weekly_data.csv')
     starting_wealth: float = 1000
-    start_datetime: str = "2023-06-01"
-    end_datetime: str = "2024-06-01"
+    start_datetime: str = "2019-01-01"
+    end_datetime: str = "2023-01-01"
     preference_curve: str = 'identity'
     horizon_weeks: int = 1
     rebalance_every: int = 1
-    optimisation_method: str = 'bayesian_with_refinement'
+    optimisation_method: str = 'forest_minimize'
     n_calls_optimiser: int = 15
     gamma: float = 5
     step_threshold: float = 1100
@@ -58,6 +58,12 @@ def optimize_portfolio_for_current_state(current_log_price, mu_seq, sigma_seq, c
             opt_config, mu_seq, sigma_seq, current_log_price, T, grid_points_per_dim)
         optimal_p, max_util = coordinate_descent_refinement(
             bayesian_p, mu_seq, sigma_seq, current_log_price, opt_config, grid_points_per_dim)
+        
+    elif cfg.optimisation_method == "forest_minimize":
+        optimal_p, max_util, result = run_forest_minimize_optimisation(
+            opt_config, mu_seq, sigma_seq, current_log_price, T, grid_points_per_dim)
+    else:
+        raise ValueError(f"Unknown optimisation method: {cfg.optimisation_method}")
     return optimal_p[0]
 
 def plot_backtesting_gp_state(gp_model, X_current, y_current, current_date, cfg):

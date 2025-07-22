@@ -95,7 +95,7 @@ def fit_gp(X, residuals, kernel, opt=True):
     gp.fit(X_reshaped, residuals)
     
     # # Print optimized kernel parameters
-    # print(f"\nOptimized kernel: {gp.kernel_}")
+    print(f"\nOptimized kernel: {gp.kernel_}")
     # print("-" * 40)
     
     return gp
