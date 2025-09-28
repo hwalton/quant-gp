@@ -240,12 +240,12 @@ def plot_final_wealth_distribution(mu_seq, sigma_seq, current_log_price, optimal
     else:
         va = 'bottom'
     
-    plt.text(
-        x_pos, y_pos,
-        f'Optimal Current Proportion BTC: {round(optimal_p[0], 2)}',
-        transform=ax.transAxes, verticalalignment=va, horizontalalignment=ha,
-        bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8), fontsize=13.5
-    )
+    # plt.text(
+    #     x_pos, y_pos,
+    #     f'Optimal Current Proportion BTC: {round(optimal_p[0], 2)}',
+    #     transform=ax.transAxes, verticalalignment=va, horizontalalignment=ha,
+    #     bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8), fontsize=13.5
+    # )
     
     plt.tight_layout()
     plt.savefig(os.path.join(PLOT_PATH, "final_wealth_distribution.png"), dpi=300, bbox_inches='tight')

@@ -101,7 +101,7 @@ The Gaussian Process model predicts the following distribution for the BTC price
 
 _Figure 1: Predicted BTC Price Distribution_
 
-Jimmy is saving up to buy a new laptop for university in 6 months time. We will consider 3 different scenarios of different laptop prices. He has an initial wealth of $1000 (£746), and wants to reach a target wealth equal to the laptop price. Once he reaches this target, he has no further need for more money. The further he falls short of this target, the more he will need to work at his part-time job to make up the shortfall.
+Meet Jimmy, who is saving up to buy a new laptop for university in 26 weeks time. We will consider 3 different scenarios of different laptop prices. He has an initial wealth of $1000 (£746), and wants to reach a target wealth equal to the laptop price. Once he reaches this target, we will assume he has no further need for more money. The further he falls short of this target, the more he will need to work at his part-time job to make up the shortfall.
 
 Therefore his subjective preference curve increases as wealth approaches the price of the laptop, but flattens out after that point as he has no further need for more money, as shown in Figure 2.
 
@@ -114,13 +114,13 @@ With a laptop price of $2000, Jimmy is far from his goal with an initial wealth 
 
 _Figure 2: Preference Curve for Case 1_
 
-Since the general market trend is predicted to be upwards, the odds are good that he will make a positive return on whatever he invests, so the utility is maximised by going all-in on BTC (100% allocation), as shown in Figure 3.
+Since the market is generally predicted to rise, its more likely than not that he will make a positive return on whatever he invests. So, the utility is maximised by going all-in on BTC (100% allocation), as shown in Figure 3.
 
 ![Figure 3: Expected Utility vs BTC Allocation for Case 1](figures/allocation_vs_utility_2000.png)
 
 _Figure 3: Expected Utility vs BTC Allocation for Case 1_
 
-The expected wealth distribution of this strategy after 6 months is shown in Figure 4.
+The expected wealth distribution of this strategy after 26 weeks is shown in Figure 4.
 
 ![Figure 4: Expected Final Wealth Distribution for Case 1](figures/final_wealth_distribution_2000.png)
 
@@ -138,7 +138,7 @@ In this case, there is no need to take on excessive risk, so the optimal strateg
 ![Figure 6: Expected Utility vs BTC Allocation for Case 2](figures/allocation_vs_utility_1100.png)
 _Figure 6: Expected Utility vs BTC Allocation for Case 2_
 
-The expected wealth distribution of this strategy after 6 months is shown in Figure 7.
+The expected wealth distribution of this strategy after 26 weeks is shown in Figure 7.
 
 ![Figure 7: Expected Final Wealth Distribution for Case 2](figures/final_wealth_distribution_1100.png)
 _Figure 7: Expected Final Wealth Distribution for Case 2_
@@ -158,7 +158,7 @@ Therefore the optimal strategy is to allocate 0% of the portfolio to BTC, as sho
 ![Figure 9: Expected Utility vs BTC Allocation for Case 3](figures/allocation_vs_utility_950.png)
 _Figure 9: Expected Utility vs BTC Allocation for Case 3_
 
-The expected wealth distribution of this strategy after 6 months is shown in Figure 10. Note that it has no chance of increasing or decreasing since the portfolio is held entirely in cash.
+The expected wealth distribution of this strategy after 26 weeks is shown in Figure 10. Note that it has no chance of increasing or decreasing since the portfolio is held entirely in cash.
 
 ![Figure 10: Expected Final Wealth Distribution for Case 3](figures/final_wealth_distribution_950.png)
 
