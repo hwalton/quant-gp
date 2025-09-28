@@ -1,6 +1,13 @@
 import pandas as pd
 import os
 
+# Config: set inclusive date range for data to include (ISO date strings or None)
+# Examples:
+#   START_DATE = "2010-07-18"
+#   END_DATE = "2025-09-28"
+START_DATE = None
+END_DATE = "2023-09-30"
+
 # File paths
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WEEKLY_DATA = os.path.join(PROJECT_ROOT, 'a_data', 'BitcoinHistory.csv')
@@ -209,6 +216,20 @@ def main():
         combined_df = weekly_df
     
     # Save the combined data
+    # Apply start/end date filtering if configured
+    if START_DATE is not None or END_DATE is not None:
+        start_ts = None
+        end_ts = None
+        if START_DATE is not None:
+            start_ts = int(pd.to_datetime(START_DATE).timestamp())
+        if END_DATE is not None:
+            end_ts = int(pd.to_datetime(END_DATE).timestamp())
+        print(f"Applying date filter: start={START_DATE} end={END_DATE}")
+        if start_ts is not None:
+            combined_df = combined_df[combined_df['timestamp'] >= start_ts]
+        if end_ts is not None:
+            combined_df = combined_df[combined_df['timestamp'] <= end_ts]
+
     combined_df.to_csv(OUTPUT_FILE, index=False)
     print(f"Combined data saved to {OUTPUT_FILE}")
     
