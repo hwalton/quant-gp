@@ -286,9 +286,9 @@ def plot_allocation_vs_utility(mu_seq, sigma_seq, current_log_price, optimal_p, 
     plt.plot(optimal_p[0] * 100, optimal_utility, 'ro', markersize=8, 
              label=f'Optimal Point')
     
-    plt.xlabel('First Step BTC Allocation (%)', fontsize=18)
+    plt.xlabel('BTC Allocation (%)', fontsize=18)
     plt.ylabel('Expected Utility', fontsize=18)
-    plt.title('Expected Utility vs First Step BTC Allocation', fontsize=21)
+    plt.title('Expected Utility vs BTC Allocation', fontsize=21)
     
     # Remove numbers from y-axis (utility axis)
     ax = plt.gca()
