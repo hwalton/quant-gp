@@ -69,11 +69,11 @@ To capture the price behaviour, it uses a custom kernel that combines:
 The `d_optimise_portfolio/optimise_portfolio.py` script uses the future price predictions of the Gaussian Process model to optimises the best BTC vs cash allocation in the portfolio for each of a sequence of rebalancing steps, $\mathbf{p}$, based on the following objective:
 
 $$
-\mathbb{E}\big[U(\log \, W_T)\big]
-\;=\; 
+\mathbb{E}\big[U(\log W_T)\big]
+= 
 \int_{\mathbb{R}^T}
-U\Bigg(\log W_0 + \sum_{t=0}^{T-1} \log\big( (1-p_t) + p_t\,e^{\,x_{t+1}-x_t}\big)\Bigg)
-\; p(x_{1:T}) \; dx_1\cdots dx_T
+U\Bigg(\log W_0 + \sum_{t=0}^{T-1} \log\big( (1-p_t) + p_te^{x_{t+1}-x_t}\big)\Bigg)
+ p(x_{1:T}) dx_1\cdots dx_T
 $$
 
 
