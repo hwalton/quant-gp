@@ -15,6 +15,9 @@ from dataclasses import dataclass
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import RBF, ConstantKernel as C, WhiteKernel, ExpSineSquared
 
+# use the shared loader to avoid duplication
+from utils.utils import load_data
+
 @dataclass(frozen=True)
 class Config:
     data_path: str = os.path.join(PROJECT_ROOT, 'a_data', 'bitcoin_combined_weekly_data.csv')
@@ -27,19 +30,6 @@ class Config:
     points_into_future: int = 48*3
     y_limit: tuple =(4, 18)
     hyperparameter_optimisation: bool = True
-
-def load_data(cfg: Config):
-    df = pd.read_csv(cfg.data_path, sep=',')
-    print("Columns:", df.columns.tolist())
-    df['timestamp'] = pd.to_datetime(df['timestamp'], unit='s')
-    df = df.sort_values(by='timestamp')
-    y_all = np.log(df['price'].astype(float).values)
-    
-    # Use all data instead of trimming to cycles
-    y = y_all
-    X = np.arange(len(y))
-    
-    return X, y
 
 def load_log_trend(cfg: Config):
     params = joblib.load(cfg.log_pkl_path)
@@ -56,25 +46,11 @@ def load_saved_predictions(cfg: Config):
 
 def build_kernel():
     return (
-        # C(1.0, (1e-3, 1e3)) * RBF(length_scale=10.0, length_scale_bounds=(1.0, 100.0)) +
-        # C(1.0, (1e-3, 1.0)) * ExpSineSquared(length_scale=10.0, periodicity=208.0,
-        #                                      length_scale_bounds=(0.1, 100.0),
-        #                                      periodicity_bounds=(150, 300)) +
+        C(1.0, (1e-3, 1e3)) * RBF(length_scale=10.0, length_scale_bounds=(1.0, 100.0)) +
+        C(1.0, (1e-3, 1.0)) * ExpSineSquared(length_scale=10.0, periodicity=208.0,
+                                             length_scale_bounds=(0.1, 100.0),
+                                             periodicity_bounds=(150, 300)) +
         WhiteKernel(noise_level=1.5, noise_level_bounds=(0.005, 200.0))
-    )
-
-def build_fixed_kernel(
-    # rbf_lengthscale=10.0,
-    # rbf_constant=1.0,
-    # periodic_lengthscale=10.0,
-    # periodic_period=218.0,
-    # periodic_constant=1.0,
-    noise_level=1.5
-):
-    return (
-        # C(rbf_constant) * RBF(length_scale=rbf_lengthscale) +
-        # C(periodic_constant) * ExpSineSquared(length_scale=periodic_lengthscale, periodicity=periodic_period) +
-        WhiteKernel(noise_level=noise_level)
     )
 
 def fit_gp(X, residuals, kernel, opt=True):
