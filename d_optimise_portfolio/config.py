@@ -16,7 +16,7 @@ class Config:
     y_pred_pkl: str = Y_PRED_PKL
     y_std_pkl: str = Y_STD_PKL
     price_csv: str = DATA_PATH
-    initial_wealth: float = 900
+    initial_wealth: float = 500
     preference_curve: str = ['step', 'coordinate_points', 'log_risk_averse', 'general_risk_level', 'max_expected_wealth', 'identity'][2]
     gamma: float = 5  # Only used if utility_function is 'crra'
     step_threshold: float = 1100

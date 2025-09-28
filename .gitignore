@@ -4,6 +4,4 @@ venv
 *.npy
 *.pth
 
-!objective_function*.png
-
 __pycache__
