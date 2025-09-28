@@ -1,6 +1,47 @@
 # **quant-gp**
 
+## **Overview:**
+
 This project aims to optimise the proportion of Bitcoin (BTC) vs cash in a portfolio. It uses a probabilistic approach to not just maximise expected returns but also manage risk, as defined by the user's subjective preferences.
+
+The main ML packages used are:
+- `scikit-learn`: for the primary Gaussian Process Regression model.
+- `scikit-optimize`: for portfolio optimisation algorithms such as Bayesian optimisation and random forest methods.
+- `scipy`: for numerical integration and optimisation of the portfolio allocation.
+- `pandas` and `numpy`: for data manipulation and numerical operations.
+- `matplotlib`: for visualisation of results.
+
+
+## **Setup:**
+Download the two CSVs and place them in a_data, create and activate the virtual environment, install dependencies, then run the pipeline.
+
+
+1. Create and activate the virtual environment, install dependencies
+   ```bash
+   # from repo root
+   python3 -m venv venv
+   source venv/bin/activate
+
+   # install requirements (ensure requirements.txt exists)
+   pip install -r requirements.txt
+   ```
+
+
+2. Download the required datasets as described in the "Data Sources / Acknowledgement" section below, and place them in the `a_data/` directory.
+
+
+3. Configure the portfolio optimisation with `d_optimise_portfolio/config.py`, including settings related to:
+    - Initial wealth
+    - Preference curve (custom curves can be written if needed)
+    - Investment horizon and rebalance frequency
+    - Optimisation methods
+
+
+4. Run the pipeline
+   ```bash
+   # from repo root
+   python main.py
+   ```
 
 ## **Pipeline Overview:**
 The key components of the project include:
@@ -24,43 +65,12 @@ To capture the price behaviour, it uses a custom kernel that combines:
 - A radial basis function (RBF) kernel (to capture smooth short term trends)
 - A white noise kernel (to account for day-to-day price volatility)
 
-## **Setup:**
-Download the two CSVs and place them in a_data, create and activate the virtual environment, install dependencies, then run the pipeline.
-
-1. Download the two CSVs from the links below in your browser and move them into the repo `a_data/` directory:
-     - https://www.kaggle.com/datasets/mczielinski/bitcoin-historical-data  (save as btcusd_1-min_data.csv)
-     - https://www.kaggle.com/datasets/shiivvvaam/bitcoin-historical-data (save as BitcoinHistory.csv)
-
-2. Create and activate the virtual environment, install dependencies
-   ```bash
-   # from repo root
-   python3 -m venv venv
-   source venv/bin/activate
-
-   # install requirements (ensure requirements.txt exists)
-   pip install -r requirements.txt
-   ```
-
-3. Configure the portfolio optimisation with `d_optimise_portfolio/config.py`, including settings related to:
-    - Initial wealth
-    - Preference curve (custom curves can be written if needed)
-    - Investment horizon and rebalance frequency
-    - Optimisation methods
-
-
-4. Run the pipeline
-   ```bash
-   # from repo root
-   python main.py
-   ```
-
-## **Portfolio Optimisation**:
-The `d_optimise_portfolio/optimise_portfolio.py` script optimises the BTC vs cash allocation in the portfolio vector for a sequence of steps in the future, $\mathbf{p}$, based on the following objective:
+### Portfolio Optimisation:
+The `d_optimise_portfolio/optimise_portfolio.py` script uses the future price predictions of the Gaussian Process model to optimises the best BTC vs cash allocation in the portfolio for each of a sequence of rebalancing steps, $\mathbf{p}$, based on the following objective:
 
 $$
-\arg\max_{\mathbf{p}}\ \mathbb{E}\big[U(\log W_T(\mathbf{p}))\big]
-\;=\;
-\arg\max_{\mathbf{p}}\ 
+\mathbb{E}\big[U(\log W_T)\big]
+\;=\; 
 \int_{\mathbb{R}^T}
 U\!\Bigg(\log W_0 + \sum_{t=0}^{T-1} \log\!\big( (1-p_t) + p_t\,e^{\,x_{t+1}-x_t}\big)\Bigg)
 \; p(x_{1:T}) \; dx_1\cdots dx_T
@@ -78,6 +88,8 @@ Where:
 - $p(x_{1:T})$: joint predictive density of future log-prices.
 
 N.B. The log wealth is used to make the objective function additive, instead of multiplicative, which allows for numerically stable accumulation of per-period returns (summing log‑factors), simpler vectorised evaluation across many simulated paths, and more stable integration and optimisation.
+
+In practice, the only first rebalancing step would be used to set each portfolio allocation, with the model being refit with up-to-date data for the next rebalance step.
 
 ## **Example Outputs**:
 
@@ -156,3 +168,19 @@ Note the optimal allocation for all three cases is different, despite the same m
 This highlights the importance of considering individual risk tolerance and investment goals when making portfolio decisions, which can be mathematically defined in a preference curve.
 
 Overall, the price predictions from the Gaussian Process model are dubious at best, and unlikely to be validated during forward testing. However, the main purpose of this project is to demonstrate the portfolio optimisation framework, which is sound, and can be applied to any probabilistic price forecast model.
+
+## Data Sources / Acknowledgement
+
+- BTC 1-minute data: "bitcoin-historical-data" by mczielinski, Kaggle. Download and save as `a_data/btcusd_1-min_data.csv`.
+  https://www.kaggle.com/datasets/mczielinski/bitcoin-historical-data
+
+- Historical BTC data: "bitcoin-historical-data" by shiivvvaam, Kaggle. Download and save as `a_data/BitcoinHistory.csv`.
+  https://www.kaggle.com/datasets/shiivvvaam/bitcoin-historical-data
+
+Please check each Kaggle dataset page for licensing and attribution requirements. These files are not included in this repository; follow the instructions below to download them.
+
+## Disclaimer
+
+This repository is a conceptual demonstration for educational purposes only. It is not intended to produce reliable predictions.
+
+It is not financial advice and should not be relied upon for investment decisions. The author is not a financial advisor.
