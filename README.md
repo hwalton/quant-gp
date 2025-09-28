@@ -93,7 +93,7 @@ In practice, the only first rebalancing step would be used to set each portfolio
 
 ## **Example Outputs**:
 
-Let's explore some example outputs from the optimisation process to understand how it may work in practice. For these examples, only 1 rebalance step is considered (i.e., the portfolio is adjusted once at the start of the investment horizon).
+Let's explore some example outputs from the optimisation process to understand how it may work in practice. For these examples, only 1 rebalance step is considered (i.e., the portfolio is adjusted once at the start of the 26 week investment horizon, and not rebalanced along the way).
 
 The Gaussian Process model predicts the following distribution for the BTC price over the near future (Figure 1):
 
@@ -101,73 +101,75 @@ The Gaussian Process model predicts the following distribution for the BTC price
 
 _Figure 1: Predicted BTC Price Distribution_
 
-Jimmy is saving up to buy a new laptop for university in 6 months time, for $1000. He has no need for anything else. He has some money to invest and the better the returns, the less time he has to spend at is part-time job to afford the laptop.
+Jimmy is saving up to buy a new laptop for university in 6 months time. We will consider 3 different scenarios of different laptop prices. He has an initial wealth of $1000 (£746), and wants to reach a target wealth equal to the laptop price. Once he reaches this target, he has no further need for more money. The further he falls short of this target, the more he will need to work at his part-time job to make up the shortfall.
 
-Therefore his subjective preference curve increases as wealth approaches $1000, but flattens out after that point as he has no further need for more money, as shown in Figure 2.
+Therefore his subjective preference curve increases as wealth approaches the price of the laptop, but flattens out after that point as he has no further need for more money, as shown in Figure 2.
 
 
-### Case 1 Initial Wealth = $500:
+### Case 1 Laptop Price: $2000:
 
-With an initial wealth of $500, Jimmy is far from his goal of $1000.
+With a laptop price of $2000, Jimmy is far from his goal with an initial wealth of $1000, as shown in Figure 2. This means he will need to work many hours at his part-time job unless he can make a significant return on his investment.
 
-![Figure 1: Preference Curve for Case 1](figures/preference_curve_500.png)
+![Figure 2: Preference Curve for Case 1](figures/preference_curve_2000.png)
 
 _Figure 2: Preference Curve for Case 1_
 
-Since the general market trend is upwards, the utility is maximised by going all-in on BTC (100% allocation), as shown in Figure 3.
+Since the general market trend is predicted to be upwards, the odds are good that he will make a positive return on whatever he invests, so the utility is maximised by going all-in on BTC (100% allocation), as shown in Figure 3.
 
-![Figure 3: Expected Utility vs BTC Allocation for Case 1](figures/allocation_vs_utility_500.png)
+![Figure 3: Expected Utility vs BTC Allocation for Case 1](figures/allocation_vs_utility_2000.png)
 
 _Figure 3: Expected Utility vs BTC Allocation for Case 1_
 
 The expected wealth distribution of this strategy after 6 months is shown in Figure 4.
 
-![Figure 4: Expected Final Wealth Distribution for Case 1](figures/final_wealth_distribution_500.png)
+![Figure 4: Expected Final Wealth Distribution for Case 1](figures/final_wealth_distribution_2000.png)
 
 _Figure 4: Expected Final Wealth Distribution for Case 1_
 
-### Case 2 Initial Wealth = $900:
+### Case 2 Laptop Price = $1100:
 
-With an initial wealth of $900, Jimmy is much closer to his goal of $1000, as shown in Figure 5. It is likely he will reach this goal even with a conservative investment strategy, but investing too much risks a large loss if the market takes a downturn, leading him to need to work much harder at his part-time job to make up the shortfall.
+Here, the price of the laptop is much closer to Jimmy's current starting wealth of $1000, as shown in Figure 5. It is likely he will reach this goal even with a conservative investment strategy, but investing too much would risk a large loss if the market takes a downturn, which would mean him working much longer hours at his part-time job to make up the shortfall.
 
-![Figure 5: Preference Curve for Case 2](figures/preference_curve_900.png)
+![Figure 5: Preference Curve for Case 2](figures/preference_curve_1100.png)
 _Figure 5: Preference Curve for Case 2_
 
-In this case, the optimal strategy is to allocate only 27% of the portfolio to BTC, to get some exposure to the upside, but limit the downside risk, as shown in Figure 6.
+In this case, there is no need to take on excessive risk, so the optimal strategy is to allocate only 24% of the portfolio to BTC, to get some exposure to the upside, but limit the downside risk, as shown in Figure 6.
 
-![Figure 6: Expected Utility vs BTC Allocation for Case 2](figures/allocation_vs_utility_900.png)
+![Figure 6: Expected Utility vs BTC Allocation for Case 2](figures/allocation_vs_utility_1100.png)
 _Figure 6: Expected Utility vs BTC Allocation for Case 2_
 
 The expected wealth distribution of this strategy after 6 months is shown in Figure 7.
 
-![Figure 7: Expected Final Wealth Distribution for Case 2](figures/final_wealth_distribution_900.png)
+![Figure 7: Expected Final Wealth Distribution for Case 2](figures/final_wealth_distribution_1100.png)
 _Figure 7: Expected Final Wealth Distribution for Case 2_
 
-### Case 3 Initial Wealth = $1000:
+Note that the expected (mean) wealth is lower than in Case 1, since the portfolio is less risky, but the chance of falling short of the laptop price is also much lower.
 
-With an initial wealth of $1000, Jimmy has already reached his goal, as shown in Figure 8. Since the marginal utility of additional wealth is zero, he has nothing to gain from investing in the risky asset that could fall in value.
+### Case 3 Laptop Price = $950
 
-![Figure 8: Preference Curve for Case 3](figures/preference_curve_1000.png)
+With an initial wealth of $1000, Jimmy has already reached his goal, as shown in Figure 8. Since the marginal utility of additional wealth is zero, he has nothing to gain from investing in the risky asset that has a chance of falling in value, even though the asset is more likely to rise.
+
+![Figure 8: Preference Curve for Case 3](figures/preference_curve_950.png)
 
 _Figure 8: Preference Curve for Case 3_
 
 Therefore the optimal strategy is to allocate 0% of the portfolio to BTC, as shown in Figure 9.
 
-![Figure 9: Expected Utility vs BTC Allocation for Case 3](figures/allocation_vs_utility_1000.png)
+![Figure 9: Expected Utility vs BTC Allocation for Case 3](figures/allocation_vs_utility_950.png)
 _Figure 9: Expected Utility vs BTC Allocation for Case 3_
 
-The expected wealth distribution of this strategy after 6 months is shown in Figure 10. Note that it has no variance, since the portfolio is held entirely in cash.
+The expected wealth distribution of this strategy after 6 months is shown in Figure 10. Note that it has no chance of increasing or decreasing since the portfolio is held entirely in cash.
 
-![Figure 10: Expected Final Wealth Distribution for Case 3](figures/final_wealth_distribution_1000.png)
+![Figure 10: Expected Final Wealth Distribution for Case 3](figures/final_wealth_distribution_950.png)
 
 _Figure 10: Expected Final Wealth Distribution for Case 3_
 
 ### Discussion:
-Note the optimal allocation for all three cases is different, despite the same market predictions, because it depends on the subjective preferences of the investor.
+The optimal allocation for all three cases is different, despite the same market predictions and starting capital, because this depends on the subjective preferences and goals of the investor.
 
-This highlights the importance of considering individual risk tolerance and investment goals when making portfolio decisions, which can be mathematically defined in a preference curve.
+This highlights the importance of considering individual risk tolerance and investment goals when making portfolio decisions, which can be mathematically defined in a preference curve using this model.
 
-Overall, the price predictions from the Gaussian Process model are dubious at best, and unlikely to be validated during forward testing. However, the main purpose of this project is to demonstrate the portfolio optimisation framework, which is sound, and can be applied to any probabilistic price forecast model.
+Overall, the actual price predictions from the Gaussian Process model are dubious at best, and unlikely to be validated by forward testing. However, the main purpose of this project is to demonstrate the portfolio optimisation framework, which is a sound way to optimise a portfolio given an accurate probabilistic forecast of future asset prices using a well-defined utility function.
 
 ## Data Sources / Acknowledgement
 

@@ -63,7 +63,7 @@ def get_preference_curve(cfg: Config):
             
             # Define wealth range for mapping
             w_min = getattr(cfg, 'log_w_min', 100)
-            w_max = getattr(cfg, 'log_w_max', 1000)
+            w_max = getattr(cfg, 'log_w_max', cfg.risk_aversion_ceiling)
             
             # Vectorized conditions
             result = np.full_like(w, -0.9, dtype=float)
