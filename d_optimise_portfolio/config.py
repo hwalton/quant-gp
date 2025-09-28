@@ -22,7 +22,7 @@ class Config:
     step_threshold: float = 1100
     step_steepness: float = 100.0
 
-    risk_aversion_ceiling: float = 950  # Only used if preference_curve is 'log_risk_averse'
+    risk_aversion_ceiling: float = 2000  # Only used if preference_curve is 'log_risk_averse'
 
     horizon_weeks: int = 26
     rebalance_every: int = 26  # weeks
