@@ -4,12 +4,17 @@
 
 This project aims to optimise the proportion of Bitcoin (BTC) vs cash in a portfolio. It uses a probabilistic approach to not just maximise expected returns but also manage risk, as defined by the user's subjective preferences.
 
+The price prediction is not intended to be accurate, but the focus is on demonstrating familiarity with common machine learning techniques and workflows.
+
 The main ML packages used are:
 - `scikit-learn`: for the primary Gaussian Process Regression model.
 - `scikit-optimize`: for portfolio optimisation algorithms such as Bayesian optimisation and random forest methods.
 - `scipy`: for numerical integration and optimisation of the portfolio allocation.
 - `pandas` and `numpy`: for data manipulation and numerical operations.
 - `matplotlib`: for visualisation of results.
+
+MLOps tools used include:
+- `MLflow`: for experiment tracking and model versioning.
 
 
 ## **Setup:**
