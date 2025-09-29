@@ -8,6 +8,8 @@ import time
 
 import os
 import sys
+import time
+import mlflow
 
 # Add the project root to sys.path
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -275,43 +277,70 @@ def main(cfg: Config = Config()):
     print(f"Initial Expected Utility: {expected_util:.4f}")
     print(f"Initial Allocation: {np.round(p_init, 3)}")
     
-    if cfg.optimisation_method == "bayesian":
-        print("\nRunning Bayesian Optimisation...")
-        optimal_p, max_util, result = run_bayesian_optimisation(cfg, mu_seq, sigma_seq, current_log_price, T, grid_points_per_dim)
+    # Run optimisation inside an MLflow run so we capture params/metrics/artifacts
+    with mlflow.start_run():
+        # log some config params (best-effort)
+        try:
+            mlflow.log_param("horizon_weeks", int(cfg.horizon_weeks))
+            mlflow.log_param("rebalance_every", int(cfg.rebalance_every))
+            mlflow.log_param("optimisation_method", str(cfg.optimisation_method))
+            mlflow.log_param("n_calls_optimiser", int(cfg.n_calls_optimiser))
+            mlflow.log_param("initial_wealth", float(cfg.initial_wealth))
+        except Exception:
+            pass
 
-        print(f"\nBayesian optimization result:")
-        print(f"Allocation: {np.round(optimal_p, 3)}")
-        print(f"Utility: {max_util:.6f}")
-    elif cfg.optimisation_method == "bayesian_with_refinement":
-        print("\nRunning Bayesian Optimisation with refinement...")
-        bayesian_p, bayesian_util, result = run_bayesian_optimisation(cfg, mu_seq, sigma_seq, current_log_price, T, grid_points_per_dim)
+        if cfg.optimisation_method == "bayesian":
+            print("\nRunning Bayesian Optimisation...")
+            optimal_p, max_util, result = run_bayesian_optimisation(cfg, mu_seq, sigma_seq, current_log_price, T, grid_points_per_dim)
+
+            print(f"\nBayesian optimization result:")
+            print(f"Allocation: {np.round(optimal_p, 3)}")
+            print(f"Utility: {max_util:.6f}")
+        elif cfg.optimisation_method == "bayesian_with_refinement":
+            print("\nRunning Bayesian Optimisation with refinement...")
+            bayesian_p, bayesian_util, result = run_bayesian_optimisation(cfg, mu_seq, sigma_seq, current_log_price, T, grid_points_per_dim)
+            
+            print(f"\nBayesian optimization result:")
+            print(f"Allocation: {np.round(bayesian_p, 3)}")
+            print(f"Utility: {bayesian_util:.6f}")
+
+            optimal_p, max_util = coordinate_descent_refinement(bayesian_p, mu_seq, sigma_seq, current_log_price, cfg, grid_points_per_dim)
+        elif cfg.optimisation_method == "forest_minimize":
+            print("\nRunning Forest Minimize Optimisation...")
+            optimal_p, max_util, result = run_forest_minimize_optimisation(cfg, mu_seq, sigma_seq, current_log_price, T, grid_points_per_dim)
+            print(f"\nForest Minimize optimization result:")
+            print(f"Allocation: {np.round(optimal_p, 3)}")
+            print(f"Utility: {max_util:.6f}")
+
+        # Log optimisation results
+        try:
+            mlflow.log_metric("max_expected_utility", float(max_util))
+            # log the allocation vector as a single param (comma-separated)
+            mlflow.log_param("optimal_p", ",".join([f"{x:.6f}" for x in optimal_p]))
+        except Exception:
+            pass
+
+        mid_time = time.time()
+        elapsed_time = mid_time - start_time
+        print(f"\nElapsed time for optimization: {elapsed_time:.2f} seconds")
         
-        print(f"\nBayesian optimization result:")
-        print(f"Allocation: {np.round(bayesian_p, 3)}")
-        print(f"Utility: {bayesian_util:.6f}")
+        # create plots (functions should save files in d_optimise_portfolio/)
+        plot_allocation_vs_utility(mu_seq, sigma_seq, current_log_price, optimal_p, cfg, grid_points_per_dim, objective_func)
+        plot_preference_curve(cfg)
+        plot_final_wealth_distribution(mu_seq, sigma_seq, current_log_price, optimal_p, cfg)
 
-        optimal_p, max_util = coordinate_descent_refinement(bayesian_p, mu_seq, sigma_seq, current_log_price, cfg, grid_points_per_dim)
-    elif cfg.optimisation_method == "forest_minimize":
-        print("\nRunning Forest Minimize Optimisation...")
-        optimal_p, max_util, result = run_forest_minimize_optimisation(cfg, mu_seq, sigma_seq, current_log_price, T, grid_points_per_dim)
-        print(f"\nForest Minimize optimization result:")
-        print(f"Allocation: {np.round(optimal_p, 3)}")
-        print(f"Utility: {max_util:.6f}")
-
-        # optimal_p, max_util = coordinate_descent_refinement(optimal_p, mu_seq, sigma_seq, current_log_price, cfg, grid_points_per_dim)
-
-
-    print(f"\nFinal optimal allocation:")
-    print(f"Allocation: {np.round(optimal_p, 3)}")
-    print(f"Maximum expected utility: {max_util:.6f}")
-
-    mid_time = time.time()
-    elapsed_time = mid_time - start_time
-    print(f"\nElapsed time for optimization: {elapsed_time:.2f} seconds")
-    
-    plot_allocation_vs_utility(mu_seq, sigma_seq, current_log_price, optimal_p, cfg, grid_points_per_dim, objective_func)
-    plot_preference_curve(cfg)
-    plot_final_wealth_distribution(mu_seq, sigma_seq, current_log_price, optimal_p, cfg)
+        # Attempt to log produced plot artifacts
+        artifact_files = [
+            os.path.join(PROJECT_ROOT, 'd_optimise_portfolio', 'allocation_vs_utility.png'),
+            os.path.join(PROJECT_ROOT, 'd_optimise_portfolio', 'preference_curve.png'),
+            os.path.join(PROJECT_ROOT, 'd_optimise_portfolio', 'final_wealth_distribution.png')
+        ]
+        for art in artifact_files:
+            try:
+                if os.path.exists(art):
+                    mlflow.log_artifact(art)
+            except Exception:
+                pass
 
     # Print timing information
     end_time = time.time()

@@ -18,6 +18,9 @@ from sklearn.gaussian_process.kernels import RBF, ConstantKernel as C, WhiteKern
 # use the shared loader to avoid duplication
 from utils.utils import load_data
 
+import mlflow
+import mlflow.sklearn
+
 @dataclass(frozen=True)
 class Config:
     data_path: str = os.path.join(PROJECT_ROOT, 'a_data', 'bitcoin_combined_weekly_data.csv')
@@ -199,11 +202,46 @@ def main():
     residuals = y - log_trend(X.ravel())
 
     kernel = build_kernel()
-    gp = fit_gp(X, residuals, kernel, cfg.hyperparameter_optimisation)
-    X_pred, y_pred, y_std = predict_gp(gp, X, log_trend, cfg)
 
-    save_outputs(gp, X_pred, y_pred, y_std, cfg)
-    plot_results(cfg)
+    # MLflow-run wraps fit, predict and saving
+    with mlflow.start_run():
+        mlflow.log_param("data_path", cfg.data_path)
+        mlflow.log_param("n_train", int(len(X)))
+        mlflow.log_param("points_into_future", int(cfg.points_into_future))
+        mlflow.log_param("hyperparameter_optimisation", bool(cfg.hyperparameter_optimisation))
+        mlflow.log_param("kernel_init", str(kernel))
+
+        gp = fit_gp(X, residuals, kernel, cfg.hyperparameter_optimisation)
+        # try logging an objective if available
+        try:
+            lml = float(gp.log_marginal_likelihood_value_)
+            mlflow.log_metric("log_marginal_likelihood", lml)
+        except Exception:
+            pass
+
+        X_pred, y_pred, y_std = predict_gp(gp, X, log_trend, cfg)
+
+        save_outputs(gp, X_pred, y_pred, y_std, cfg)
+        plot_results(cfg)
+
+        # log artifacts and model
+        try:
+            mlflow.log_artifact(cfg.plot_path)
+        except Exception:
+            pass
+
+        # artifacts: saved numpy/pkl files
+        for pth in (cfg.gp_pkl_path, cfg.x_pred_pkl, cfg.y_pred_pkl, cfg.y_std_pkl):
+            try:
+                mlflow.log_artifact(pth)
+            except Exception:
+                pass
+
+        # log sklearn model (best-effort)
+        try:
+            mlflow.sklearn.log_model(gp, "gp_model")
+        except Exception as e:
+            print("Warning: mlflow.sklearn.log_model failed:", e)
 
 if __name__ == '__main__':    
     main()

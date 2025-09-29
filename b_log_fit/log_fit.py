@@ -14,6 +14,8 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(PROJECT_ROOT)
 from utils.utils import load_data
 
+import mlflow
+
 DATA_PATH = os.path.join(PROJECT_ROOT, 'a_data', 'bitcoin_combined_weekly_data.csv')
 OUTPUT_PKL = os.path.join(PROJECT_ROOT, 'b_log_fit', 'log_trend_params.pkl')
                           
@@ -48,9 +50,29 @@ def main(cfg: Config = Config()):
         raise FileNotFoundError(f"Data file not found: {cfg.data_path}")
     
     X, y = load_data(cfg)
-    params = fit_log_trend(X, y)
-    print(f"Fitted log curve params: a={params[0]:.4f}, b={params[1]:.6f}, c={params[2]:.4f}")
-    save_params(params, cfg.output_pkl)
+
+    # MLflow logging
+    with mlflow.start_run():
+        mlflow.log_param("data_path", cfg.data_path)
+        mlflow.log_param("cycle_length", cfg.cycle_length)
+
+        params = fit_log_trend(X, y)
+        print(f"Fitted log curve params: a={params[0]:.4f}, b={params[1]:.6f}, c={params[2]:.4f}")
+        save_params(params, cfg.output_pkl)
+
+        # log fitted params as run params
+        try:
+            mlflow.log_param("logtrend_a", float(params[0]))
+            mlflow.log_param("logtrend_b", float(params[1]))
+            mlflow.log_param("logtrend_c", float(params[2]))
+        except Exception:
+            pass
+
+        # log the output pkl as an artifact
+        try:
+            mlflow.log_artifact(cfg.output_pkl)
+        except Exception as e:
+            print("Warning: failed to log artifact:", e)
 
 if __name__ == '__main__':
     main()
