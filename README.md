@@ -79,7 +79,7 @@ $$
 
 Where:
 - $E[\cdot]$: expectation under the forecast distribution for future log-prices.
-- $U(\cdot)$: utility function applied to log-wealth.
+- $U(\cdot)$: utility function applied to log-wealth, which uses the arctanh of the preference curve to map preferences in the range $(-1, 1)$ to $(-\infty, \infty)$.
 - $W_T(\mathbf{p})$: terminal (final) portfolio wealth at the optimisation horizon $T$ given portfolio allocation $\mathbf{p}$.
 - $W_0$: initial wealth (cfg.initial_wealth in code).
 - $p_t$: fraction of portfolio allocated to BTC at rebalance $t$ ($0 \leq p_t \leq 1$).
