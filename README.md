@@ -2,7 +2,7 @@
 
 ## **Overview:**
 
-This project aims to optimise the proportion of Bitcoin (BTC) vs cash in a portfolio. It uses a probabilistic approach to not just maximise expected returns but also manage risk, as defined by the user's subjective preferences.
+This project aims to optimise the proportion of a volatile asset vs cash in a portfolio. It uses a probabilistic approach to not just maximise expected returns but also manage risk, as defined by the user's subjective preferences.
 
 The main ML packages used are:
 - `scikit-learn`: for the primary Gaussian Process Regression model.
@@ -48,20 +48,20 @@ The key components of the project include:
 
 ### Data Formatting: 
 
-The `a_data/format_data.py` script processes historical BTC price data, ensuring it's clean and ready for analysis.
+The `a_data/format_data.py` script processes historical asset price data, ensuring it's clean and ready for analysis.
 
 ### Logarithmic fit:
-The `b_log_fit/log_fit.py` script fits a logarithmic curve to the historical BTC price data, which describes the long-term trend of BTC prices.
+The `b_log_fit/log_fit.py` script fits a logarithmic curve to the historical asset price data, which describes the long-term trend of asset prices.
 
 ### Gaussian Process Regression:
-The `c_gp_fit/gp_fit.py` script fits a Gaussian Process Regression model to the log BTC prices.
+The `c_gp_fit/gp_fit.py` script fits a Gaussian Process Regression model to the log asset prices.
 
 More specifically, it models the residuals of the log price after removing the long-term trend identified in the previous step, to allow for a zero-mean prior.
 
 This is a probabilistic model that conditions a joint Gaussian distribution on the observed data to make predictions about future prices. These predictions include both a mean (expected price) and a standard deviation (uncertainty about that price).
 
 To capture the price behaviour, it uses a custom kernel that combines:
-- A periodic kernel (to capture the ~4 year cyclical nature of BTC prices)
+- A periodic kernel (to capture the ~4 year cyclical nature of asset prices (Bitcoin/BTC)
 - A radial basis function (RBF) kernel (to capture smooth short term trends)
 - A white noise kernel (to account for day-to-day price volatility)
 
