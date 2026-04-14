@@ -101,14 +101,14 @@ The Gaussian Process model predicts the following distribution for the BTC price
 
 _Figure 1: Predicted BTC Price Distribution_
 
-Meet Jimmy, who is saving up to buy a new laptop for university in 26 weeks time. We will consider 3 different scenarios of different laptop prices. He has an initial wealth of $1000 (£746), and wants to reach a target wealth equal to the laptop price. Once he reaches this target, we will assume he has no further need for more money. The further he falls short of this target, the more he will need to work at his part-time job to make up the shortfall.
+Meet Joe Bloggs, who is saving up to buy a new laptop for university in 26 weeks time. We will consider 3 different scenarios of different laptop prices. He has an initial wealth of $1000 (£746), and wants to reach a target wealth equal to the laptop price. Once he reaches this target, we will assume he has no further need for more money. The further he falls short of this target, the more he will need to work at his part-time job to make up the shortfall.
 
 Therefore his subjective preference curve increases as wealth approaches the price of the laptop, but flattens out after that point as he has no further need for more money, as shown in Figure 2.
 
 
 ### Case 1 Laptop Price: $2000:
 
-With a laptop price of $2000, Jimmy is far from his goal with an initial wealth of $1000, as shown in Figure 2. This means he will need to work many hours at his part-time job unless he can make a significant return on his investment.
+With a laptop price of $2000, Joe is far from his goal with an initial wealth of $1000, as shown in Figure 2. This means he will need to work many hours at his part-time job unless he can make a significant return on his investment.
 
 ![Figure 2: Preference Curve for Case 1](figures/preference_curve_2000.png)
 
@@ -128,7 +128,7 @@ _Figure 4: Expected Final Wealth Distribution for Case 1_
 
 ### Case 2 Laptop Price = $1100:
 
-Here, the price of the laptop is much closer to Jimmy's current starting wealth of $1000, as shown in Figure 5. It is likely he will reach this goal even with a conservative investment strategy, but investing too much would risk a large loss if the market takes a downturn, which would mean him working much longer hours at his part-time job to make up the shortfall.
+Here, the price of the laptop is much closer to Joe's current starting wealth of $1000, as shown in Figure 5. It is likely he will reach this goal even with a conservative investment strategy, but investing too much would risk a large loss if the market takes a downturn, which would mean him working much longer hours at his part-time job to make up the shortfall.
 
 ![Figure 5: Preference Curve for Case 2](figures/preference_curve_1100.png)
 _Figure 5: Preference Curve for Case 2_
@@ -147,7 +147,7 @@ Note that the expected (mean) wealth is lower than in Case 1, since the portfoli
 
 ### Case 3 Laptop Price = $950
 
-With an initial wealth of $1000, Jimmy has already reached his goal, as shown in Figure 8. Since the marginal utility of additional wealth is zero, he has nothing to gain from investing in the risky asset that has a chance of falling in value, even though the asset is more likely to rise.
+With an initial wealth of $1000, Joe has already reached his goal, as shown in Figure 8. Since the marginal utility of additional wealth is zero, he has nothing to gain from investing in the risky asset that has a chance of falling in value, even though the asset is more likely to rise.
 
 ![Figure 8: Preference Curve for Case 3](figures/preference_curve_950.png)
 
