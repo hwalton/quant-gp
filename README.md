@@ -70,7 +70,7 @@ The `d_optimise_portfolio/optimise_portfolio.py` script uses the future price pr
 
 $$
 \mathbb{E}\big[U(\log W_T)\big]
-\;=\; 
+\,=\,
 \int_{\mathbb{R}^T}
 U \Bigg(\log W_0 + \sum_{t=0}^{T-1} \log \big( (1-p_t) + p_t e^{x_{t+1}-x_t}\big)\Bigg)
 \; \prod_{t=1}^{T}\mathcal{N}(x_t;\mu_t,\sigma_t^2) \; dx_1\cdots dx_T
