@@ -73,7 +73,7 @@ $$
 \;=\; 
 \int_{\mathbb{R}^T}
 U \Bigg(\log W_0 + \sum_{t=0}^{T-1} \log \big( (1-p_t) + p_t e^{x_{t+1}-x_t}\big)\Bigg)
-\; p(x_{1:T}) \; dx_1\cdots dx_T
+\; \prod_{t=1}^{T}\mathcal{N}(x_t;\mu_t,\sigma_t^2) \; dx_1\cdots dx_T
 $$
 
 
@@ -85,9 +85,11 @@ Where:
 - $p_t$: fraction of portfolio allocated to BTC at rebalance $t$ ($0 \leq p_t \leq 1$).
 - $x_t$: log-price at rebalance time $t$; $x_{t+1} - x_t$ is the log-return from $t$ to $t+1$.
 - $T$: number of rebalancing periods (horizon length).
-- $p(x_{1:T})$: joint predictive density of future log-prices.
+- $\mathcal{N}(x_t;\mu_t,\sigma_t^2)$: Gaussian marginal density for log-price at rebalance time $t$ with mean $\mu_t$ and standard deviation $\sigma_t$.
 
 N.B. The log wealth is used to make the objective function additive, instead of multiplicative, which allows for numerically stable accumulation of per-period returns (summing log‑factors), simpler vectorised evaluation across many simulated paths, and more stable integration and optimisation.
+
+Implementation note: for computational efficiency, the current objective uses an independence approximation across future rebalance times, i.e., the integration weight is factorised as $\prod_t \mathcal{N}(x_t;\mu_t,\sigma_t^2)$ rather than a full correlated joint density $p(x_{1:T})$.
 
 In practice, the only first rebalancing step would be used to set each portfolio allocation, with the model being refit with up-to-date data for the next rebalance step.
 
