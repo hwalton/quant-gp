@@ -157,7 +157,7 @@ def plot_final_wealth_distribution(mu_seq, sigma_seq, current_log_price, optimal
         
         # Normalize to ensure it's a proper PDF
         if np.sum(pdf_values) > 0:
-            pdf_values = pdf_values / np.trapz(pdf_values, wealth_range)
+            pdf_values = pdf_values / np.trapezoid(pdf_values, wealth_range)
         
     else:
         # Fallback to linear interpolation for few points

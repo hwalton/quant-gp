@@ -6,13 +6,29 @@ import os
 #   START_DATE = "2010-07-18"
 #   END_DATE = "2025-09-28"
 START_DATE = None
-END_DATE = "2023-09-30"
+END_DATE = None
 
 # File paths
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WEEKLY_DATA = os.path.join(PROJECT_ROOT, 'a_data', 'BitcoinHistory.csv')
 MINUTE_DATA = os.path.join(PROJECT_ROOT, 'a_data', 'btcusd_1-min_data.csv')
 OUTPUT_FILE = os.path.join(PROJECT_ROOT, 'a_data', 'bitcoin_combined_weekly_data.csv')
+
+def datetime_to_unix_seconds(dt_series):
+    """
+    Convert pandas datetime series to Unix seconds robustly across
+    datetime resolutions (ns/us/ms/s).
+    """
+    raw = dt_series.astype('int64')
+    max_abs = int(raw.abs().max()) if len(raw) else 0
+
+    if max_abs > 10**17:      # nanoseconds
+        return (raw // 10**9).astype('int64')
+    if max_abs > 10**14:      # microseconds
+        return (raw // 10**6).astype('int64')
+    if max_abs > 10**11:      # milliseconds
+        return (raw // 10**3).astype('int64')
+    return raw.astype('int64')  # already seconds
 
 def process_weekly_data(file_path):
     """Process daily Bitcoin data and resample to weekly (Sunday close)"""
@@ -64,7 +80,7 @@ def process_weekly_data(file_path):
     }).reset_index()
     
     # Convert Date back to timestamp
-    weekly_df['timestamp'] = weekly_df['Date'].astype('int64') // 10**9
+    weekly_df['timestamp'] = datetime_to_unix_seconds(weekly_df['Date'])
     
     # Rename columns to match expected format
     weekly_df = weekly_df.rename(columns={
@@ -109,9 +125,10 @@ def process_minute_data(file_path, last_timestamp):
     
     # Convert timestamp to unix timestamp if it's not already
     if df[timestamp_col].dtype == 'object':
-        df['timestamp'] = pd.to_datetime(df[timestamp_col]).astype('int64') // 10**9
+        df['timestamp'] = datetime_to_unix_seconds(pd.to_datetime(df[timestamp_col]))
     else:
-        df['timestamp'] = df[timestamp_col]
+        # Keep numeric timestamps as seconds; coerce floats/strings safely.
+        df['timestamp'] = pd.to_numeric(df[timestamp_col], errors='coerce').astype('int64')
     
     # Filter for data after the last weekly timestamp
     df = df[df['timestamp'] > last_timestamp]
@@ -173,7 +190,7 @@ def process_minute_data(file_path, last_timestamp):
         'change_pct': lambda x: ((1 + x/100).prod() - 1) * 100  # Compound change
     }).reset_index()
     
-    weekly_df['timestamp'] = weekly_df['datetime'].astype('int64') // 10**9
+    weekly_df['timestamp'] = datetime_to_unix_seconds(weekly_df['datetime'])
     weekly_df = weekly_df.drop('datetime', axis=1)
     
     return weekly_df
